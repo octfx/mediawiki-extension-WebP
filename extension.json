@@ -1,0 +1,59 @@
+{
+	"name": "WebP",
+	"author": [
+		"Octfx"
+	],
+	"url": "https://www.mediawiki.org/wiki/Extension:WebP",
+	"descriptionmsg": "webp-desc",
+	"license-name": "GPL-2.0-or-later",
+	"type": "other",
+	"requires": {
+		"MediaWiki": ">= 1.35.0"
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\WebP\\": "includes/"
+	},
+	"config": {
+		"WebPCompressionQuality": {
+			"description": "Compression Quality",
+			"value": 50
+		},
+		"WebPFilterStrength": {
+			"description": "Filter Strength",
+			"value": 50
+		},
+		"WebPAutoFilter": {
+			"description": "Enable Auto Filter",
+			"value": true
+		},
+		"WebPConvertInJobQueue": {
+			"description": "Convert Files in JopQueue. BROKEN",
+			"value": false
+		}
+	},
+	"HookHandlers": {
+		"WebPMainHooks": {
+			"class": "MediaWiki\\Extension\\WebP\\Hooks\\MainHooks"
+		},
+		"WebPFileHooks": {
+			"class": "MediaWiki\\Extension\\WebP\\Hooks\\FileHooks"
+		},
+		"WebPThumbnailHooks": {
+			"class": "MediaWiki\\Extension\\WebP\\Hooks\\ThumbnailHooks"
+		}
+	},
+	"Hooks": {
+		"FileTransformed": "WebPFileHooks",
+		"FileDeleteComplete": "WebPFileHooks",
+		"FileUndeleteComplete": "WebPFileHooks",
+		"UploadComplete": "WebPMainHooks",
+		"ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
+		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"
+	},
+	"MessagesDirs": {
+		"WebP": [
+			"i18n"
+		]
+	},
+	"manifest_version": 2
+}
