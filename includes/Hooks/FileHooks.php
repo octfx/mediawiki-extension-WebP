@@ -22,6 +22,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Hooks;
 
+use ImagickException;
 use JobQueueGroup;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
@@ -79,6 +80,12 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook {
 			return;
 		}
 
-		$transformer->transformLikeThumb( $thumb );
+		try {
+			$transformer->transformLikeThumb( $thumb );
+		} catch ( ImagickException $e ) {
+			wfLogWarning( $e->getMessage() );
+
+			return;
+		}
 	}
 }
