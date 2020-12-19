@@ -1,4 +1,9 @@
 {
+	"require": {
+		"php": ">=7.3",
+		"ext-imagick": "*",
+		"composer/installers": ">=1.0.1"
+	},
 	"require-dev": {
 		"mediawiki/mediawiki-codesniffer": "34.0.0",
 		"mediawiki/minus-x": "1.1.0",
@@ -15,5 +20,8 @@
 			"minus-x fix .",
 			"phpcbf"
 		]
+	},
+	"extra": {
+		"installer-name": "WebP"
 	}
 }
