@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\WebP;
 
 use ConfigException;
 use File;
+use FileRepo;
 use Imagick;
 use ImagickException;
 use MediaTransformOutput;
@@ -35,7 +36,12 @@ class WebPTransformer {
 	 */
 	private $file;
 
-	public function __construct( File $file ) {
+	/**
+	 * @var array
+	 */
+	private $options;
+
+	public function __construct( File $file, array $options = [] ) {
 		$this->checkImagickInstalled();
 
 		if ( !in_array( $file->getMimeType(), self::$supportedMimes ) ) {
@@ -47,6 +53,7 @@ class WebPTransformer {
 		}
 
 		$this->file = $file;
+		$this->options = $options;
 	}
 
 	/**
@@ -69,7 +76,7 @@ class WebPTransformer {
 			self::changeExtensionWebp( $this->file->getName() )
 		);
 
-		if ( $this->checkFileExists( $finalPath, 'thumb' ) ) {
+		if ( $this->checkFileExists( $finalPath, 'public' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
@@ -80,7 +87,8 @@ class WebPTransformer {
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
 			'thumb',
-			$finalPath
+			$finalPath,
+			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
 		);
 
 		$this->logStatus( $status );
@@ -104,7 +112,7 @@ class WebPTransformer {
 			self::changeExtensionWebp( $this->file->getName() )
 		);
 
-		if ( $this->checkFileExists( $finalPath, 'public' ) ) {
+		if ( $this->checkFileExists( $finalPath, 'public' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
@@ -114,7 +122,8 @@ class WebPTransformer {
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
 			'public',
-			$finalPath
+			$finalPath,
+			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
 		);
 
 		$this->logStatus( $status );
@@ -149,6 +158,15 @@ class WebPTransformer {
 	}
 
 	/**
+	 * Check if the overwrite flag was set
+	 *
+	 * @return bool
+	 */
+	private function shouldOverwrite(): bool {
+		return isset( $this->options['overwrite'] );
+	}
+
+	/**
 	 * Prepare to transform the image
 	 * Options are configurable
 	 *
@@ -175,7 +193,7 @@ class WebPTransformer {
 	 */
 	private function logStatus( Status $status ): void {
 		if ( !$status->isOK() ) {
-			wfLogWarning( sprintf( 'Extension:WebP could not write image "%s"', $this->file->getName() ) );
+			wfLogWarning( sprintf( 'Extension:WebP could not write image "%s". Message: %s', $this->file->getName(), $status->getMessage() ) );
 		}
 	}
 

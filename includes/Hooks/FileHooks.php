@@ -58,7 +58,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook {
 		}
 
 		try {
-			$transformer = new WebPTransformer( $file );
+			$transformer = new WebPTransformer( $file, [ 'overwrite' => true, ] );
 		} catch ( RuntimeException $e ) {
 			return;
 		}
@@ -71,6 +71,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook {
 						'title' => $file->getTitle(),
 						'width' => $thumb->getWidth(),
 						'height' => $thumb->getHeight(),
+						'overwrite' => true,
 					]
 				)
 			);

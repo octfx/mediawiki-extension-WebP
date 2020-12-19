@@ -36,7 +36,7 @@ class TransformWebPImageJob extends Job {
 		}
 
 		try {
-		$transformer = new WebPTransformer( $file );
+			$transformer = new WebPTransformer( $file, [ 'overwrite' => isset( $this->params['overwrite'] ) ] );
 		} catch ( RuntimeException $e ) {
 			$this->setLastError( $e->getMessage() );
 			return false;

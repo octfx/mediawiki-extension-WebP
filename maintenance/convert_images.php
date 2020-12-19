@@ -19,6 +19,7 @@ class ConvertImages extends Maintenance {
 		$this->addOption( 'no-thumbs', 'Disable WebP creation of thumbnails.' );
 		$this->addOption( 'thumb-sizes', 'Sizes of thumbs to generate. Provide a comma separated list of sizes like 1000,1200.' );
 		$this->addOption( 'titles', 'Work on these images instead of all. Provide a comma separated list of titles like Title1.jpg,Title2.jpg.' );
+		$this->addOption( 'overwrite', 'Overwrite files if they already exist.' );
 		$this->setBatchSize( 100 );
 
 		$this->requireExtension( 'WebP' );
@@ -52,6 +53,7 @@ class ConvertImages extends Maintenance {
 				Title::newFromText( $item->page_title, NS_FILE ),
 				[
 					'title' => $item->page_title,
+					'overwrite' => $this->hasOption( 'overwrite' ),
 				]
 			);
 
@@ -78,7 +80,8 @@ class ConvertImages extends Maintenance {
 				[
 					'title' => $title,
 					'width' => $size,
-					'height' => 0, // Auto size
+					'height' => 0, // Auto size,
+					'overwrite' => $this->hasOption( 'overwrite' ),
 				]
 			);
 		}

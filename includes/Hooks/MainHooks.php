@@ -43,7 +43,7 @@ class MainHooks implements UploadCompleteHook {
 		}
 
 		try {
-			$transformer = new WebPTransformer( $uploadBase->getLocalFile() );
+			$transformer = new WebPTransformer( $uploadBase->getLocalFile(), [ 'overwrite' => true ] );
 		} catch ( RuntimeException $e ) {
 			return;
 		}
@@ -54,6 +54,7 @@ class MainHooks implements UploadCompleteHook {
 					$uploadBase->getTitle(),
 					[
 						'title' => $uploadBase->getTitle(),
+						'overwrite' => true,
 					]
 				)
 			);

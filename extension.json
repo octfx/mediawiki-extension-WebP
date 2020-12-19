@@ -36,7 +36,7 @@
 		},
 		"WebPConvertInJobQueue": {
 			"description": "Convert Files in JopQueue",
-			"value": false
+			"value": true
 		},
 		"WebPThumbSizes": {
 			"description": "Thumbnail Sizes to create through the maintenance script",
