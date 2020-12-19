@@ -31,6 +31,8 @@ class ConvertImages extends Maintenance {
 		if ( $this->hasOption( 'titles' ) ) {
 			$result = explode( ',', $this->getOption( 'titles' ) );
 			$result = array_map( static function ( $entry ) {
+			    $entry = str_replace(' ', '_', $entry);
+
 				return (object)[ 'page_title' => trim( $entry ) ];
 			}, $result );
 		} else {
