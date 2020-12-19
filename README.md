@@ -23,7 +23,7 @@ php extensions/WebP/maintenance/convert_images.php --thumb-sizes=1000,1250
 php extensions/WebP/maintenance/convert_images.php --titles=ImageA.jpg,ImageB.png
 
 # To force the creation of already existing images run
-php extensions/WebP/maintenance/convert_images.php --force 
+php extensions/WebP/maintenance/convert_images.php --overwrite 
 ```
 
 ## Installation
