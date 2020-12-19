@@ -9,6 +9,7 @@ use File;
 use FileRepo;
 use Imagick;
 use ImagickException;
+use ImagickPixel;
 use MediaTransformOutput;
 use MediaWiki\MediaWikiServices;
 use RuntimeException;
@@ -90,7 +91,8 @@ class WebPTransformer {
 				$this->file->getName()
 			)
 		);
-		$img->resizeImage( (int)$thumb->getWidth(), 0, 22, 1 );
+
+		$img->resizeImage( (int)$thumb->getWidth(), 0, Imagick::FILTER_CATROM, 1 );
 
 		$img->writeImage( sprintf( 'webp:%s', $tempFile ) );
 
@@ -202,12 +204,19 @@ class WebPTransformer {
 			]
 		);
 
+		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
+
+		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
+		$image->setCompression( Imagick::COMPRESSION_JPEG );
+
 		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 
-		$image->setOption( 'alpha-compression', '1' );
-		$image->setOption( 'auto-filter', $this->getConfigValue( 'WebPAutoFilter' ) ? '1' : '0' );
-		$image->setOption( 'filter-strength', (string)$this->getConfigValue( 'WebPFilterStrength' ) );
-		$image->setOption( 'filter-type', '1' );
+		$image->setOption( 'webp:method', '6' );
+		$image->setOption( 'webp:low-memory', 'true' );
+		$image->setOption( 'webp:auto-filter', $this->getConfigValue( 'WebPAutoFilter' ) ? 'true' : 'false' );
+		$image->setOption( 'webp:alpha-quality', (string)$this->getConfigValue( 'WebPFilterStrength' ) );
+		# $image->setOption( 'filter-strength', (string)$this->getConfigValue( 'WebPFilterStrength' ) );
+		#$image->setOption( 'filter-type', '1' );
 
 		if ( $props['fileExists'] === true ) {
 			$targetSize = $this->getConfigValue( 'WebPTargetSize' ) * $props['size'];
