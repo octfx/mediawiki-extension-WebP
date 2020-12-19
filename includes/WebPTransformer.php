@@ -80,8 +80,18 @@ class WebPTransformer {
 			return Status::newGood();
 		}
 
-		$img = $this->prepare();
+		$img = $this->prepare(
+			sprintf(
+				'%s/%s%s/%dpx-%s',
+				$this->file->getRepo()->getZonePath( 'thumb' ),
+				$this->file->getHashPath(),
+				$this->file->getName(),
+				$thumb->getWidth(),
+				$this->file->getName()
+			)
+		);
 		$img->resizeImage( (int)$thumb->getWidth(), 0, 22, 1 );
+
 		$img->writeImage( sprintf( 'webp:%s', $tempFile ) );
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
@@ -116,7 +126,14 @@ class WebPTransformer {
 			return Status::newGood();
 		}
 
-		$img = $this->prepare();
+		$img = $this->prepare(
+			sprintf(
+				'%s/%s%s',
+				$this->file->getRepo()->getZonePath( 'public' ),
+				$this->file->getHashPath(),
+				$this->file->getName(),
+			)
+		);
 		$img->writeImage( sprintf( 'webp:%s', $tempFile ) );
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
@@ -170,11 +187,20 @@ class WebPTransformer {
 	 * Prepare to transform the image
 	 * Options are configurable
 	 *
+	 * @param string $sourcePath Path to source image
+	 *
 	 * @return Imagick
 	 * @throws ImagickException
 	 */
-	private function prepare(): Imagick {
+	private function prepare( string $sourcePath ): Imagick {
 		$image = new Imagick( $this->file->getLocalRefPath() );
+
+		$props = $this->file->getRepo()->getBackend()->getFileProps(
+			[
+				'src' => $sourcePath,
+				'latest' => true,
+			]
+		);
 
 		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 
@@ -182,6 +208,19 @@ class WebPTransformer {
 		$image->setOption( 'auto-filter', $this->getConfigValue( 'WebPAutoFilter' ) ? '1' : '0' );
 		$image->setOption( 'filter-strength', (string)$this->getConfigValue( 'WebPFilterStrength' ) );
 		$image->setOption( 'filter-type', '1' );
+
+		if ( $props['fileExists'] === true ) {
+			$targetSize = $this->getConfigValue( 'WebPTargetSize' ) * $props['size'];
+			$image->setOption( 'target-size', (string)( $targetSize ) );
+		}
+
+		$profiles = $image->getImageProfiles( 'icc', true );
+
+		$image->stripImage();
+
+		if ( !empty( $profiles ) ) {
+			$image->profileImage( 'icc', $profiles['icc'] );
+		}
 
 		return $image;
 	}

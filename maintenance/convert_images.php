@@ -66,19 +66,19 @@ class ConvertImages extends Maintenance {
 			}
 		}
 
-		if (MediaWikiServices::getInstance()->getMainConfig()->get('WebPConvertInJobQueue') === true ) {
-            JobQueueGroup::singleton()->push( $jobs );
-        } else {
-            foreach ($jobs as $job) {
-                $result = MediaWikiServices::getInstance()->getJobRunner()->executeJob($job);
-                if (!$result) {
-                    $this->error($result['error'] ?? "Job {$job->getTitle()->getBaseText()} failed");
-                } else {
-                    $this->output(sprintf("Done: %s (%s)\n", json_encode($job->getParams()), json_encode($result)));
-                }
-		    }
-        }
-    }
+		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
+			JobQueueGroup::singleton()->push( $jobs );
+		} else {
+			foreach ( $jobs as $job ) {
+				$result = MediaWikiServices::getInstance()->getJobRunner()->executeJob( $job );
+				if ( !$result ) {
+					$this->error( $result['error'] ?? "Job {$job->getTitle()->getBaseText()} failed" );
+				} else {
+					$this->output( sprintf( "Done: %s (%s)\n", json_encode( $job->getParams() ), json_encode( $result ) ) );
+				}
+			}
+		}
+	}
 
 	private function makeThumbnailJobs( string $title ): array {
 		$sizes = MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPThumbSizes' );
