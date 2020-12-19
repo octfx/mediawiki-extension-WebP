@@ -74,7 +74,7 @@ class ConvertImages extends Maintenance {
                 if (!$result) {
                     $this->error($result['error'] ?? "Job {$job->getTitle()->getBaseText()} failed");
                 } else {
-                    $this->output(sprintf("Done: %s\n", json_encode($job->getParams())));
+                    $this->output(sprintf("Done: %s (%s)\n", json_encode($job->getParams()), json_encode($result)));
                 }
 		    }
         }
