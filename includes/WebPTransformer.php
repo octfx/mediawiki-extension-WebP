@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\WebP;
 
 use ConfigException;
+use Exception;
 use File;
 use FileRepo;
 use Imagick;
@@ -12,227 +13,277 @@ use ImagickException;
 use ImagickPixel;
 use MediaTransformOutput;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\ProcOpenError;
+use MediaWiki\Shell\Shell;
+use MediaWiki\ShellDisabledError;
 use RuntimeException;
 use Status;
 
 /**
  * Main class for transforming images into webp files
  */
-class WebPTransformer {
+class WebPTransformer
+{
 
-	/**
-	 * Supported files
-	 *
-	 * @var string[]
-	 */
-	public static $supportedMimes = [
-		// 'image/gif', -- Animations wont work
-		'image/jpeg',
-		'image/jpg',
-		'image/png',
-	];
+    /**
+     * Supported files
+     *
+     * @var string[]
+     */
+    public static $supportedMimes = [
+        // 'image/gif', -- Animations wont work
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+    ];
 
-	/**
-	 * @var File
-	 */
-	private $file;
+    /**
+     * @var File
+     */
+    private $file;
 
-	/**
-	 * @var array
-	 */
-	private $options;
+    /**
+     * @var array
+     */
+    private $options;
 
-	public function __construct( File $file, array $options = [] ) {
-		$this->checkImagickInstalled();
+    public function __construct(File $file, array $options = [])
+    {
+        $this->checkImagickInstalled();
 
-		if ( !in_array( $file->getMimeType(), self::$supportedMimes ) ) {
-			throw new RuntimeException(
-				'Mimetype "%s" is not in supported mime: [%s]',
-				$file->getMimeType(),
-				implode( ', ', self::$supportedMimes )
-			);
-		}
+        if (!in_array($file->getMimeType(), self::$supportedMimes)) {
+            throw new RuntimeException(
+                'Mimetype "%s" is not in supported mime: [%s]',
+                $file->getMimeType(),
+                implode(', ', self::$supportedMimes)
+            );
+        }
 
-		$this->file = $file;
-		$this->options = $options;
-	}
+        $this->file = $file;
+        $this->options = $options;
+    }
 
-	/**
-	 * Create a webp image based on thumbnail dimensions
-	 *
-	 * @param MediaTransformOutput $thumb
-	 *
-	 * @return Status
-	 *
-	 * @throws ImagickException
-	 */
-	public function transformLikeThumb( MediaTransformOutput $thumb ): Status {
-		$tempFile = $this->getTempFilePath();
+    /**
+     * Create a webp image based on thumbnail dimensions
+     *
+     * @param MediaTransformOutput $thumb
+     *
+     * @return Status
+     *
+     * @throws ImagickException
+     */
+    public function transformLikeThumb(MediaTransformOutput $thumb): Status
+    {
+        $tempFile = $this->getTempFilePath();
 
-		$finalPath = sprintf(
-			'%s/%s/%dpx-%s',
-			$this->file->getHashPath(),
-			$this->file->getName(),
-			$thumb->getWidth(),
-			self::changeExtensionWebp( $this->file->getName() )
-		);
+        $out = sprintf(
+            '%s%s/%dpx-%s',
+            $this->file->getHashPath(),
+            $this->file->getName(),
+            $thumb->getWidth(),
+            self::changeExtensionWebp($this->file->getName())
+        );
 
-		if ( $this->checkFileExists( $finalPath, 'public' ) && !$this->shouldOverwrite() ) {
-			return Status::newGood();
-		}
+        if ($this->checkFileExists($out, 'public') && !$this->shouldOverwrite()) {
+            return Status::newGood();
+        }
 
-		$img = $this->prepare(
-			sprintf(
-				'%s/%s%s/%dpx-%s',
-				$this->file->getRepo()->getZonePath( 'thumb' ),
-				$this->file->getHashPath(),
-				$this->file->getName(),
-				$thumb->getWidth(),
-				$this->file->getName()
-			)
-		);
+        $result = $this->transformImage($tempFile, $thumb->getWidth());
 
-		$img->resizeImage( (int)$thumb->getWidth(), 0, Imagick::FILTER_CATROM, 1 );
+        if (!$result) {
+            return Status::newFatal('Could not convert Image');
+        }
 
-		$img->writeImage( sprintf( 'webp:%s', $tempFile ) );
+        $status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
+            $tempFile,
+            'thumb',
+            $out,
+            $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
+        );
 
-		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
-			$tempFile,
-			'thumb',
-			$finalPath,
-			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
-		);
+        $this->logStatus($status);
 
-		$this->logStatus( $status );
+        return $status;
+    }
 
-		return $status;
-	}
+    /**
+     * Transform the original file to a webp one
+     *
+     * @return Status
+     *
+     * @throws ImagickException
+     */
+    public function transform(): Status
+    {
+        $tempFile = $this->getTempFilePath();
 
-	/**
-	 * Transform the original file to a webp one
-	 *
-	 * @return Status
-	 *
-	 * @throws ImagickException
-	 */
-	public function transform(): Status {
-		$tempFile = $this->getTempFilePath();
+        $out = sprintf(
+            '%s/%s',
+            $this->file->getHashPath(),
+            self::changeExtensionWebp($this->file->getName())
+        );
 
-		$finalPath = sprintf(
-			'%s/%s',
-			$this->file->getHashPath(),
-			self::changeExtensionWebp( $this->file->getName() )
-		);
 
-		if ( $this->checkFileExists( $finalPath, 'public' ) && !$this->shouldOverwrite() ) {
-			return Status::newGood();
-		}
+        if ($this->checkFileExists($out, 'public') && !$this->shouldOverwrite()) {
+            return Status::newGood();
+        }
 
-		$img = $this->prepare(
-			sprintf(
-				'%s/%s%s',
-				$this->file->getRepo()->getZonePath( 'public' ),
-				$this->file->getHashPath(),
-				$this->file->getName(),
-			)
-		);
-		$img->writeImage( sprintf( 'webp:%s', $tempFile ) );
+        $result = $this->transformImage($tempFile);
 
-		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
-			$tempFile,
-			'public',
-			$finalPath,
-			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
-		);
+        if (!$result) {
+            return Status::newFatal('Could not convert Image');
+        }
+        $status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
+            $tempFile,
+            'public',
+            $out,
+            $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
+        );
 
-		$this->logStatus( $status );
+        $this->logStatus($status);
 
-		return $status;
-	}
+        return $status;
+    }
 
-	/**
-	 * Change out a file extension to webp
-	 *
-	 * @param string $path
-	 *
-	 * @return string
-	 */
-	public static function changeExtensionWebp( string $path ): string {
-		return str_replace(
-			pathinfo( $path, PATHINFO_EXTENSION ),
-			'webp',
-			$path
-		);
-	}
+    /**
+     * Change out a file extension to webp
+     *
+     * @param string $path
+     *
+     * @return string
+     */
+    public static function changeExtensionWebp(string $path): string
+    {
+        return str_replace(
+            pathinfo($path, PATHINFO_EXTENSION),
+            'webp',
+            $path
+        );
+    }
 
-	/**
-	 * Check if Imagick is installed
-	 *
-	 * @throws RuntimeException
-	 */
-	private function checkImagickInstalled(): void {
-		if ( !extension_loaded( 'imagick' ) ) {
-			throw new RuntimeException( 'Extension:WebP requires Imagick' );
-		}
-	}
+    /**
+     * Check if Imagick is installed
+     *
+     * @throws RuntimeException
+     */
+    private function checkImagickInstalled(): void
+    {
+        if (!extension_loaded('imagick')) {
+            throw new RuntimeException('Extension:WebP requires Imagick');
+        }
+    }
 
-	/**
-	 * Check if the overwrite flag was set
-	 *
-	 * @return bool
-	 */
-	private function shouldOverwrite(): bool {
-		return isset( $this->options['overwrite'] );
-	}
+    /**
+     * Check if the overwrite flag was set
+     *
+     * @return bool
+     */
+    private function shouldOverwrite(): bool
+    {
+        return isset($this->options['overwrite']);
+    }
 
-	/**
-	 * Prepare to transform the image
-	 * Options are configurable
-	 *
-	 * @param string $sourcePath Path to source image
-	 *
-	 * @return Imagick
-	 * @throws ImagickException
-	 */
-	private function prepare( string $sourcePath ): Imagick {
-		$image = new Imagick( $this->file->getLocalRefPath() );
+    /**
+     * @param string $sourcePath
+     * @param string $outPath
+     * @param int    $width
+     *
+     * @return bool
+     * @throws ImagickException
+     */
+    private function transformImage(string $outPath, int $width = -1): bool
+    {
+        $cwebpResult = $this->transformCwebp($outPath, $width);
 
-		$props = $this->file->getRepo()->getBackend()->getFileProps(
-			[
-				'src' => $sourcePath,
-				'latest' => true,
-			]
-		);
+        if (!$cwebpResult) {
+            return $this->transformImagick($outPath, $width);
+        }
 
-		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
+        return true;
+    }
 
-		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
-		$image->setCompression( Imagick::COMPRESSION_JPEG );
+    /**
+     * @param string $sourcePath
+     * @param string $outPath
+     * @param int    $width
+     *
+     * @return bool
+     */
+    private function transformCwebp(string $outPath, int $width = -1): bool
+    {
+        if (Shell::isDisabled()) {
+            return false;
+        }
 
-		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
+        $command = MediaWikiServices::getInstance()->getShellCommandFactory()->create();
 
-		$image->setOption( 'webp:method', '6' );
-		$image->setOption( 'webp:low-memory', 'true' );
-		$image->setOption( 'webp:auto-filter', $this->getConfigValue( 'WebPAutoFilter' ) ? 'true' : 'false' );
-		$image->setOption( 'webp:alpha-quality', (string)$this->getConfigValue( 'WebPFilterStrength' ) );
-		# $image->setOption( 'filter-strength', (string)$this->getConfigValue( 'WebPFilterStrength' ) );
-		#$image->setOption( 'filter-type', '1' );
+        $resize = '';
 
-		if ( $props['fileExists'] === true ) {
-			$targetSize = $this->getConfigValue( 'WebPTargetSize' ) * $props['size'];
-			$image->setOption( 'target-size', (string)( $targetSize ) );
-		}
+        if ($width > 0) {
+            $resize = sprintf('-resize %d 0', $width);
+        }
 
-		$profiles = $image->getImageProfiles( 'icc', true );
+        $command->unsafeParams(
+            [
+                'cwebp',
+                '-quiet',
+                $resize,
+                sprintf('-q %d', $this->getConfigValue('WebPCompressionQuality')),
+                $this->file->getLocalRefPath(),
+                sprintf('-o %s', $outPath),
+            ]
+        );
 
-		$image->stripImage();
+        try {
+            $result = $command->execute();
+        } catch (ProcOpenError | ShellDisabledError | Exception $e) {
+            wfLogWarning($e->getMessage());
 
-		if ( !empty( $profiles ) ) {
-			$image->profileImage( 'icc', $profiles['icc'] );
-		}
+            return false;
+        }
 
-		return $image;
-	}
+        return $result->getExitCode() === 0;
+    }
+
+    /**
+     * Prepare to transform the image
+     * Options are configurable
+     *
+     * @param string $sourcePath Path to source image
+     *
+     * @return bool
+     * @throws ImagickException
+     */
+    private function transformImagick(string $outPath, int $width = -1): bool
+    {
+        $image = new Imagick($this->file->getLocalRefPath());
+
+        $image->setImageBackgroundColor(new ImagickPixel('transparent'));
+
+        $image = $image->mergeImageLayers(Imagick::LAYERMETHOD_MERGE);
+        $image->setCompression(Imagick::COMPRESSION_JPEG);
+
+        $image->setCompressionQuality($this->getConfigValue('WebPCompressionQuality'));
+        $image->setImageFormat('webp');
+        $image->setOption('webp:method', '6');
+        $image->setOption('webp:low-memory', 'true');
+        $image->setOption('webp:auto-filter', $this->getConfigValue('WebPAutoFilter') ? 'true' : 'false');
+        $image->setOption('webp:alpha-quality', (string)$this->getConfigValue('WebPFilterStrength'));
+
+        $profiles = $image->getImageProfiles('icc', true);
+
+        $image->stripImage();
+
+        if (!empty($profiles)) {
+            $image->profileImage('icc', $profiles['icc']);
+        }
+
+        if ($width > 0) {
+            $image->resizeImage((int)$width, 0, Imagick::FILTER_CATROM, 1);
+        }
+
+        return $image->writeImage(sprintf('webp:%s', $outPath));
+    }
 
 	/**
 	 * Log a warning if a transform failed

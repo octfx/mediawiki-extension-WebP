@@ -24,15 +24,11 @@
 		},
 		"WebPCompressionQuality": {
 			"description": "Compression Quality",
-			"value": 50
+			"value": 80
 		},
 		"WebPFilterStrength": {
 			"description": "Filter Strength",
 			"value": 50
-		},
-		"WebPTargetSize": {
-			"description": "Target image size. Value * Orig Image Size = Target",
-			"value": 0.8
 		},
 		"WebPAutoFilter": {
 			"description": "Enable Auto Filter",
