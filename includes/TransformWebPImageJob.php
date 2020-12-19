@@ -45,15 +45,21 @@ class TransformWebPImageJob extends Job {
 		try {
 			if ( isset( $this->params['width'] ) ) {
 				$fakeThumb = new FakeMediaTransformOutput( (int)$this->params['width'], (int)$this->params['height'] );
-				$transformer->transformLikeThumb( $fakeThumb );
+				$status = $transformer->transformLikeThumb( $fakeThumb );
 			} else {
-				$transformer->transform();
+                $status = $transformer->transform();
 			}
 		} catch ( Exception $e ) {
 			$this->setLastError( $e->getMessage() );
 
 			return false;
 		}
+
+        if (!$status->isOK()) {
+            $this->setLastError($status->getMessage());
+
+            return false;
+        }
 
 		return true;
 	}
