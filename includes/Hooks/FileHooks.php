@@ -58,6 +58,10 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook {
 			return;
 		}
 
+		if ( !in_array( $file->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+			return;
+		}
+
 		try {
 			$transformer = new WebPTransformer( $file, [ 'overwrite' => true, ] );
 		} catch ( RuntimeException $e ) {

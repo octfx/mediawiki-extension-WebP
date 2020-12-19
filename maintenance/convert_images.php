@@ -49,6 +49,10 @@ class ConvertImages extends Maintenance {
 		$jobs = [];
 
 		foreach ( $result as $item ) {
+			if ( preg_match( '/(jpe?g|png)/i', $item->page_title ) !== 1 ) {
+				continue;
+			}
+
 			$jobs[] = new TransformWebPImageJob(
 				Title::newFromText( $item->page_title, NS_FILE ),
 				[

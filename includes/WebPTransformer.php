@@ -24,8 +24,8 @@ class WebPTransformer {
 	 *
 	 * @var string[]
 	 */
-	private static $supportedMimes = [
-		'image/gif',
+	public static $supportedMimes = [
+		// 'image/gif', -- Animations wont work
 		'image/jpeg',
 		'image/jpg',
 		'image/png',
