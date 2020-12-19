@@ -79,6 +79,12 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook {
 			return;
 		}
 
-		$transformer->transformLikeThumb( $thumb );
+		try {
+			$transformer->transformLikeThumb( $thumb );
+		} catch ( ImagickException $e ) {
+			wfLogWarning( $e->getMessage() );
+
+			return;
+		}
 	}
 }
