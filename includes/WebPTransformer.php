@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\WebP;
 use ConfigException;
 use File;
 use Imagick;
+use ImagickException;
 use MediaTransformOutput;
 use MediaWiki\MediaWikiServices;
 use RuntimeException;
@@ -54,24 +55,32 @@ class WebPTransformer {
 	 * @param MediaTransformOutput $thumb
 	 *
 	 * @return Status
+	 *
+	 * @throws ImagickException
 	 */
 	public function transformLikeThumb( MediaTransformOutput $thumb ): Status {
 		$tempFile = $this->getTempFilePath();
 
+		$finalPath = sprintf(
+			'%s/%s/%dpx-%s',
+			$this->file->getHashPath(),
+			$this->file->getName(),
+			$thumb->getWidth(),
+			self::changeExtensionWebp( $this->file->getName() )
+		);
+
+		if ( $this->checkFileExists( $finalPath, 'thumb' ) ) {
+			return Status::newGood();
+		}
+
 		$img = $this->prepare();
-		$img->resizeImage( (int)$thumb->getWidth(), (int)$thumb->getHeight(), 22, 1, true );
+		$img->resizeImage( (int)$thumb->getWidth(), 0, 22, 1 );
 		$img->writeImage( sprintf( 'webp:%s', $tempFile ) );
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
 			'thumb',
-			sprintf(
-				'%s/%s/%dpx-%s',
-				$this->file->getHashPath(),
-				$this->file->getName(),
-				$thumb->getWidth(),
-				self::changeExtensionWebp( $this->file->getName() )
-			)
+			$finalPath
 		);
 
 		$this->logStatus( $status );
@@ -83,9 +92,21 @@ class WebPTransformer {
 	 * Transform the original file to a webp one
 	 *
 	 * @return Status
+	 *
+	 * @throws ImagickException
 	 */
 	public function transform(): Status {
 		$tempFile = $this->getTempFilePath();
+
+		$finalPath = sprintf(
+			'%s/%s',
+			$this->file->getHashPath(),
+			self::changeExtensionWebp( $this->file->getName() )
+		);
+
+		if ( $this->checkFileExists( $finalPath, 'public' ) ) {
+			return Status::newGood();
+		}
 
 		$img = $this->prepare();
 		$img->writeImage( sprintf( 'webp:%s', $tempFile ) );
@@ -93,11 +114,7 @@ class WebPTransformer {
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
 			'public',
-			sprintf(
-				'%s/%s',
-				$this->file->getHashPath(),
-				self::changeExtensionWebp( $this->file->getName() )
-			)
+			$finalPath
 		);
 
 		$this->logStatus( $status );
@@ -136,7 +153,7 @@ class WebPTransformer {
 	 * Options are configurable
 	 *
 	 * @return Imagick
-	 * @throws \ImagickException
+	 * @throws ImagickException
 	 */
 	private function prepare(): Imagick {
 		$image = new Imagick( $this->file->getLocalRefPath() );
@@ -175,6 +192,23 @@ class WebPTransformer {
 		}
 
 		return $tempFSFile->getPath();
+	}
+
+	/**
+	 * Check if a given file exists at a given zone
+	 *
+	 * @param string $path
+	 * @param string $zone
+	 *
+	 * @return bool
+	 */
+	private function checkFileExists( string $path, string $zone ): bool {
+		$root = $this->file->getRepo()->getZonePath( $zone );
+
+		return MediaWikiServices::getInstance()
+			->getRepoGroup()
+			->getLocalRepo()
+			->fileExists( "$root/$path" );
 	}
 
 	/**

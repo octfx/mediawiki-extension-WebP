@@ -29,10 +29,11 @@ use MediaWiki\MediaWikiServices;
 use RequestContext;
 
 class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforeProduceHTMLHook {
-
 	/**
 	 * Clean old webp thumbs
 	 * This is taken from LocalFile.php
+	 *
+	 * @inheritDoc
 	 */
 	public function onLocalFilePurgeThumbnails( $file, $archiveName ): void {
 		$dir = $file->getThumbPath();
@@ -62,6 +63,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 
 	/**
 	 * Change out the image link with a webp one, if the browser supports webp, and a local webp file exists
+	 * If the image contains the class 'no-webp' the original image will be returned
 	 *
 	 * @inheritDoc
 	 */
@@ -69,6 +71,10 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		$request = RequestContext::getMain();
 
 		if ( $request === null || strpos( $request->getRequest()->getHeader( 'ACCEPT' ), 'image/webp' ) === false ) {
+			return;
+		}
+
+		if ( isset( $attribs['class'] ) && strpos( $attribs['class'], 'no-webp' ) !== false ) {
 			return;
 		}
 
@@ -93,5 +99,4 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 			$attribs['src'] = $webP;
 		}
 	}
-
 }

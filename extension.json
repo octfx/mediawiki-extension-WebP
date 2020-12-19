@@ -14,6 +14,14 @@
 		"MediaWiki\\Extension\\WebP\\": "includes/"
 	},
 	"config": {
+		"WebPEnableConvertOnUpload": {
+			"description": "Enables WebP creation after a new image was uploaded",
+			"value": true
+		},
+		"WebPEnableConvertOnTransform": {
+			"description": "Enables WebP creation after a thumbnail was created",
+			"value": true
+		},
 		"WebPCompressionQuality": {
 			"description": "Compression Quality",
 			"value": 50
@@ -27,8 +35,18 @@
 			"value": true
 		},
 		"WebPConvertInJobQueue": {
-			"description": "Convert Files in JopQueue. BROKEN",
+			"description": "Convert Files in JopQueue",
 			"value": false
+		},
+		"WebPThumbSizes": {
+			"description": "Thumbnail Sizes to create through the maintenance script",
+			"value": [
+				120,
+				320,
+				800,
+				1200,
+				1600
+			]
 		}
 	},
 	"HookHandlers": {
@@ -45,7 +63,6 @@
 	"Hooks": {
 		"FileTransformed": "WebPFileHooks",
 		"FileDeleteComplete": "WebPFileHooks",
-		"FileUndeleteComplete": "WebPFileHooks",
 		"UploadComplete": "WebPMainHooks",
 		"ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
 		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"
@@ -54,6 +71,9 @@
 		"WebP": [
 			"i18n"
 		]
+	},
+	"JobClasses": {
+		"TransformWebPImage": "MediaWiki\\Extension\\WebP\\TransformWebPImageJob"
 	},
 	"manifest_version": 2
 }

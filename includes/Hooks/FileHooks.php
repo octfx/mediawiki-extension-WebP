@@ -27,11 +27,10 @@ use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\FileDeleteCompleteHook;
 use MediaWiki\Hook\FileTransformedHook;
-use MediaWiki\Hook\FileUndeleteCompleteHook;
 use MediaWiki\MediaWikiServices;
 use RuntimeException;
 
-class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, FileUndeleteCompleteHook {
+class FileHooks implements FileTransformedHook, FileDeleteCompleteHook {
 
 	/**
 	 * @inheritDoc
@@ -49,35 +48,27 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, FileUnde
 	}
 
 	/**
-	 * @inheritDoc
-	 *
-	 * TODO
-	 */
-	public function onFileUndeleteComplete( $title, $fileVersions, $user, $reason ): void {
-		// TODO: Implement onFileUndeleteComplete() method.
-	}
-
-	/**
 	 * For each created thumbnail well create a webp version
 	 *
 	 * @inheritDoc
 	 */
 	public function onFileTransformed( $file, $thumb, $tmpThumbPath, $thumbPath ): void {
+		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPEnableConvertOnTransform' ) === false ) {
+			return;
+		}
+
 		try {
 			$transformer = new WebPTransformer( $file );
 		} catch ( RuntimeException $e ) {
-			wfLogWarning( $e->getMessage() );
-
 			return;
 		}
 
 		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
-			JobQueueGroup::singleton()->lazyPush(
+			JobQueueGroup::singleton()->push(
 				new TransformWebPImageJob(
-					'createWebPImageThumbJob',
+					$file->getTitle(),
 					[
 						'title' => $file->getTitle(),
-						'likeThumb' => true,
 						'width' => $thumb->getWidth(),
 						'height' => $thumb->getHeight(),
 					]
