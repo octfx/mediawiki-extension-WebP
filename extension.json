@@ -63,6 +63,7 @@
 	"Hooks": {
 		"FileTransformed": "WebPFileHooks",
 		"FileDeleteComplete": "WebPFileHooks",
+		"PageMoveCompleting": "WebPFileHooks",
 		"UploadComplete": "WebPMainHooks",
 		"ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
 		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"

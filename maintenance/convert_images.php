@@ -20,6 +20,8 @@ class ConvertImages extends Maintenance {
 		$this->addOption( 'thumb-sizes', 'Sizes of thumbs to generate. Provide a comma separated list of sizes like 1000,1200.' );
 		$this->addOption( 'titles', 'Work on these images instead of all. Provide a comma separated list of titles like Title1.jpg,Title2.jpg.' );
 		$this->addOption( 'overwrite', 'Overwrite files if they already exist.' );
+		$this->addOption( 'title-prefix', 'Page title prefix.' );
+		$this->addOption( 'file-type', 'File type to work on. Write file extension without dot.' );
 		$this->setBatchSize( 100 );
 
 		$this->requireExtension( 'WebP' );
@@ -31,20 +33,36 @@ class ConvertImages extends Maintenance {
 		if ( $this->hasOption( 'titles' ) ) {
 			$result = explode( ',', $this->getOption( 'titles' ) );
 			$result = array_map( static function ( $entry ) {
-			    $entry = str_replace(' ', '_', $entry);
+				$entry = str_replace( ' ', '_', $entry );
 
 				return (object)[ 'page_title' => trim( $entry ) ];
 			}, $result );
 		} else {
+			$conditions = [
+				'page_namespace' => NS_FILE,
+			];
+
+			if ( $this->hasOption( 'title-prefix' ) ) {
+				$conditions[] = sprintf( 'page_title LIKE \'%s%%\'', $this->getOption( 'title-prefix' ) );
+			}
+
+			if ( $this->hasOption( 'file-type' ) ) {
+				$conditions[] = sprintf( 'page_title LIKE \'%%%s\'', $this->getOption( 'file-type' ) );
+			}
+
 			$result = $dbr->select(
 				[ 'page' ],
 				[ 'page_title' ],
-				[ 'page_namespace' => NS_FILE ],
+				$conditions,
 				__METHOD__
 			);
 
 			if ( !$result->valid() ) {
-				$this->error( 'Could not get Images.' );
+				if ( $result->numRows() === 0 ) {
+					$this->output( 'Query does not match any pages.' );
+				} else {
+					$this->error( 'Could not get Images.' );
+				}
 			}
 		}
 

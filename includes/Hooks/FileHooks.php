@@ -23,15 +23,17 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\WebP\Hooks;
 
 use ImagickException;
+use JakubOnderka\PhpParallelLint\Exception;
 use JobQueueGroup;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\FileDeleteCompleteHook;
 use MediaWiki\Hook\FileTransformedHook;
+use MediaWiki\Hook\PageMoveCompletingHook;
 use MediaWiki\MediaWikiServices;
 use RuntimeException;
 
-class FileHooks implements FileTransformedHook, FileDeleteCompleteHook {
+class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMoveCompletingHook {
 
 	/**
 	 * @inheritDoc
@@ -91,5 +93,42 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook {
 
 			return;
 		}
+	}
+
+	public function onPageMoveCompleting( $old, $new, $user, $pageid, $redirid, $reason, $revision ) {
+		return;
+		$root = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->getZonePath( 'public' );
+
+		$file = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->f(
+			WebPTransformer::changeExtensionWebp( $old->getText() )
+		);
+
+		throw new Exception( json_encode( $file->exists() ) );
+		$file->load( \File::READ_LATEST );
+
+		if ( $file->exists() ) {
+			$file->getLocalRefPath();
+
+			$newFile = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->newFile(
+				$new
+			);
+
+			throw new Exception( json_encode( $newFile ) );
+
+			$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->getBackend()->move(
+				[
+					'src' => sprintf( '%s/%s', $root, $file->getLocalRefPath() ),
+					'dst' => WebPTransformer::changeExtensionWebp( sprintf( '%s/%s', $root, $newFile->getLocalRefPath() ) ),
+				]
+			);
+		} else {
+			$status = \Status::newGood();
+		}
+
+		// Clear RepoGroup process cache
+		MediaWikiServices::getInstance()->getRepoGroup()->clearCache( $old );
+		MediaWikiServices::getInstance()->getRepoGroup()->clearCache( $new ); # clear false negative cache
+		wfVarDump( $status );
+		error_log( json_encode( $status ) );
 	}
 }
