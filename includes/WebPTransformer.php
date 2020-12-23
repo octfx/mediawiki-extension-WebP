@@ -85,7 +85,7 @@ class WebPTransformer {
 			return Status::newGood();
 		}
 
-		$result = $this->transformImage( $tempFile, $thumb->getWidth() );
+		$result = $this->transformImage( $tempFile, (int)$thumb->getWidth() );
 
 		if ( !$result ) {
 			return Status::newFatal( 'Could not convert Image' );
