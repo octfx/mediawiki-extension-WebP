@@ -84,6 +84,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		}
 
 		$path = $thumbnail->getStoragePath();
+
 		if ( $path === false ) {
 			$path = $thumbnail->getFile()->getPath();
 		}
@@ -94,6 +95,14 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		);
 
 		$pathLocal = sprintf( '%swebp', substr( $path, 0, -( strlen( pathinfo( $thumbnail->getUrl(), PATHINFO_EXTENSION ) ) ) ) );
+
+		$pathLocal = str_replace( [ 'local-public', 'local-thumb' ], [ 'local-public/webp', 'local-thumb/webp' ], $pathLocal );
+
+		if ( strpos( $webP, 'thumb/' ) !== false ) {
+			$webP = str_replace( 'thumb/', 'thumb/webp/', $webP );
+		} else {
+			$webP = str_replace( 'images/', 'images/webp/', $webP );
+		}
 
 		if ( MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->fileExists( $pathLocal ) ) {
 			$attribs['src'] = $webP;

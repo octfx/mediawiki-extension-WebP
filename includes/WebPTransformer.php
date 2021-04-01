@@ -81,7 +81,7 @@ class WebPTransformer {
 			self::changeExtensionWebp( $this->file->getName() )
 		);
 
-		if ( $this->checkFileExists( $out, 'public' ) && !$this->shouldOverwrite() ) {
+		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
@@ -93,7 +93,7 @@ class WebPTransformer {
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
-			'thumb',
+			'webp-thumb',
 			$out,
 			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
 		);
@@ -119,7 +119,7 @@ class WebPTransformer {
 			self::changeExtensionWebp( $this->file->getName() )
 		);
 
-		if ( $this->checkFileExists( $out, 'public' ) && !$this->shouldOverwrite() ) {
+		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
@@ -130,7 +130,7 @@ class WebPTransformer {
 		}
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
-			'public',
+			'webp-public',
 			$out,
 			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
 		);

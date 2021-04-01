@@ -1,4 +1,10 @@
 {
+	"name": "mediawiki/webp",
+	"version": "0.0.1",
+	"type": "mediawiki-extension",
+	"description": "Generate WebP Versions of images",
+	"homepage": "",
+	"license": "GPL-2.0+",
 	"require": {
 		"php": ">=7.3",
 		"ext-imagick": "*",

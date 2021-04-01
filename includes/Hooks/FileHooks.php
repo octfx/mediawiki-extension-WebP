@@ -35,20 +35,29 @@ use RuntimeException;
 class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMoveCompletingHook {
 
 	/**
-     * Creates a webp version of an image after upload was completed
-     *
+	 * Creates a webp version of an image after upload was completed
+	 *
 	 * @inheritDoc
 	 */
 	public function onFileDeleteComplete( $file, $oldimage, $article, $user, $reason ): void {
-		MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->quickPurgeBatch(
-			[
-				WebPTransformer::changeExtensionWebp( $file->getPath() ),
-			]
-		);
+		$oldPath = sprintf( 'mwstore://local-backend/local-public/webp/%s', $file->getHashPath() );
+		$oldThumbPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $file->getHashPath() );
 
-		MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->quickCleanDir(
-			$file->getPath()
-		);
+		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+
+		$oldThumbs = $repo->getBackend()->getFileList( [
+			'dir' => $oldThumbPath
+		] );
+
+		foreach ( $oldThumbs as $oldThumb ) {
+			$repo->quickPurge( sprintf( '%s/%s', $oldThumbPath, ltrim( $oldThumb, '/' ) ) );
+		}
+
+		$repo->quickPurge( sprintf( '%s/%s', $oldPath, WebPTransformer::changeExtensionWebp( $file->getName() ) ) );
+
+		$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
+		$repo->quickCleanDir( $oldPath );
+		$repo->quickCleanDir( $oldThumbPath );
 	}
 
 	/**
@@ -96,17 +105,19 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		}
 	}
 
-    /**
-     * We'll move the webp version of a file after a page move completes
-     *
-     * @inheritDoc
-     */
+	/**
+	 * We'll move the webp version of a file after a page move completes
+	 *
+	 * @inheritDoc
+	 */
 	public function onPageMoveCompleting( $old, $new, $user, $pageid, $redirid, $reason, $revision ) {
-		$oldFile = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->newFile(
+		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+
+		$oldFile = $repo->newFile(
 			 $old->getText()
 		);
 
-		$newFile = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->newFile(
+		$newFile = $repo->newFile(
 			$new->getText()
 		);
 
@@ -114,15 +125,74 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			return;
 		}
 
-		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->getBackend()->move(
+		$oldPath = WebPTransformer::changeExtensionWebp( str_replace( 'local-public', 'local-public/webp', $oldFile->getPath() ) );
+		$newPath = WebPTransformer::changeExtensionWebp( str_replace( 'local-public', 'local-public/webp', $newFile->getPath() ) );
+
+		$repo->getBackend()->prepare( [
+			'dir' => $this->getDirPath( $newPath )
+		] );
+
+		$status = $repo->getBackend()->move(
 			[
-				'src' => WebPTransformer::changeExtensionWebp( $oldFile->getPath() ),
-				'dst' => WebPTransformer::changeExtensionWebp( $newFile->getPath() ),
+				'src' => $oldPath,
+				'dst' => $newPath,
 			]
 		);
 
 		if ( !$status->isOK() ) {
 			wfLogWarning( json_encode( $status->getErrors() ) );
 		}
+
+		$repo->quickPurge( $this->getDirPath( $oldPath ) );
+		$repo->quickCleanDir( $this->getDirPath( $oldPath ) );
+
+		$this->moveThumbs(
+			$oldFile,
+			$newFile
+		);
+	}
+
+	private function getDirPath( string $filePath ): string {
+		$path = explode( '/', $filePath );
+		array_pop( $path );
+
+		return implode( '/', $path );
+	}
+
+	private function moveThumbs( \LocalFile $oldFile, \LocalFile $newFile ): void {
+		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+
+		$newPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $newFile->getHashPath() );
+		$oldPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $oldFile->getHashPath() );
+
+		$oldName = explode( '/', $oldFile->getPath() );
+		$oldName = array_pop( $oldName );
+		$ending = pathinfo( $oldName, PATHINFO_EXTENSION );
+		$oldName = str_replace( $ending, '', $oldName );
+
+		$newName = explode( '/', $newFile->getPath() );
+		$newName = array_pop( $newName );
+		$ending = pathinfo( $newName, PATHINFO_EXTENSION );
+		$newName = str_replace( $ending, '', $newName );
+
+		$repo->getBackend()->prepare( [
+			'dir' => sprintf( '%s%s%s', $newPath, ltrim( $newName, '/' ), $ending )
+		] );
+
+		$files = $repo->getBackend()->getFileList( [
+			'dir' => $oldPath
+		] );
+
+		foreach ( $files as $file ) {
+			$repo->getBackend()->move(
+				[
+					'src' => sprintf( '%s%s', $oldPath, $file ),
+					'dst' => sprintf( '%s%s', $newPath, str_replace( $oldName, $newName, $file ) ),
+				]
+			);
+		}
+
+		$repo->quickPurge( $oldPath );
+		$repo->quickCleanDir( $oldPath );
 	}
 }
