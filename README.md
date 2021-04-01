@@ -46,6 +46,20 @@ $wgWebPAutoFilter = true;
 $wgWebPConvertInJobQueue = true;
 $wgWebPEnableConvertOnUpload = true;
 $wgWebPEnableConvertOnTransform = true;
+
+
+$wgLocalFileRepo = [
+    'class' => \MediaWiki\Extension\WebP\Repo\LocalWebPFileRepo::class,
+    'name' => 'local',
+    'directory' => $wgUploadDirectory,
+    'scriptDirUrl' => $wgScriptPath,
+    'url' => $wgUploadBaseUrl ? $wgUploadBaseUrl . $wgUploadPath : $wgUploadPath,
+    'hashLevels' => $wgHashedUploadDirectory ? 2 : 0,
+    'thumbScriptUrl' => $wgThumbnailScriptPath,
+    'transformVia404' => false,
+    'deletedDir' => "{$wgUploadDirectory}/deleted",
+    'deletedHashLevels' => $wgHashedUploadDirectory ? 3 : 0
+];
 ```
 
 ## De-Installation
