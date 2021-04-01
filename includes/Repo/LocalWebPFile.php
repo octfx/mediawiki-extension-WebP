@@ -4,25 +4,10 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Repo;
 
-class LocalWebPFile extends \LocalFile {
+use LocalFile;
 
-/*
-	public function getUrl()
-	{
+class LocalWebPFile extends LocalFile {
 
-
-
-		if (!isset($this->url)) {
-			$this->assertRepoDefined();
-			$ext = $this->getExtension();
-			$this->url = $this->repo->getZoneUrl('public', $ext) . '/' . $this->getUrlRel();
-		}
-
-		return $this->url;
-
-	}
-
-	*/
 	public function getPath() {
 		$zone = 'webp-public';
 

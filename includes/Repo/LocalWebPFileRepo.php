@@ -6,7 +6,7 @@ namespace MediaWiki\Extension\WebP\Repo;
 
 class LocalWebPFileRepo extends \LocalRepo {
 
-	function __construct( array $info = null ) {
+	public function __construct( array $info = null ) {
 		$this->fileFactory = [ LocalWebPFile::class, 'newFromTitle' ];
 		$this->fileFactoryKey = [ LocalWebPFile::class, 'newFromKey' ];
 		$this->fileFromRowFactory = [ LocalWebPFile::class, 'newFromRow' ];
@@ -55,5 +55,4 @@ class LocalWebPFileRepo extends \LocalRepo {
 
 		return ( parent::fileExists( $base ) || parent::fileExists( $file ) );
 	}
-
 }
