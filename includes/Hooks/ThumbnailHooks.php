@@ -70,7 +70,11 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 	public function onThumbnailBeforeProduceHTML( $thumbnail, &$attribs, &$linkAttribs ): void {
 		$request = RequestContext::getMain();
 
-		if ( $request === null || $request->getRequest()->getHeader( 'ACCEPT' ) === false || strpos( $request->getRequest()->getHeader( 'ACCEPT' ), 'image/webp' ) === false ) {
+		if ( $request === null || $request->getRequest()->getHeader( 'ACCEPT' ) === false ) {
+			return;
+		}
+
+		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPCheckAcceptHeader' ) === true && strpos( $request->getRequest()->getHeader( 'ACCEPT' ), 'image/webp' ) === false ) {
 			return;
 		}
 

@@ -25,6 +25,10 @@
 			"description": "Enables WebP creation after a thumbnail was created",
 			"value": true
 		},
+		"WebPEnableCheckAcceptHeader": {
+			"description": "Check if the accept header contains webp",
+			"value": false
+		},
 		"WebPCompressionQuality": {
 			"description": "Compression Quality",
 			"value": 80

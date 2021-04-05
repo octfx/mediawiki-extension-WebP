@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"type": "mediawiki-extension",
 	"description": "Generate WebP Versions of images",
-	"homepage": "",
+	"homepage": "https://github.com/octfx/mediawiki-extension-WebP",
 	"license": "GPL-2.0+",
 	"require": {
 		"php": ">=7.3",
