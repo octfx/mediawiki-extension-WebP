@@ -22,8 +22,10 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Hooks;
 
+use ConfigException;
 use ImagickException;
 use JobQueueGroup;
+use LocalFile;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\FileDeleteCompleteHook;
@@ -66,7 +68,11 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	 * @inheritDoc
 	 */
 	public function onFileTransformed( $file, $thumb, $tmpThumbPath, $thumbPath ): void {
-		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPEnableConvertOnTransform' ) === false ) {
+		try {
+			if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPEnableConvertOnTransform' ) === false ) {
+				return;
+			}
+		} catch ( ConfigException $e ) {
 			return;
 		}
 
@@ -80,19 +86,23 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			return;
 		}
 
-		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
-			JobQueueGroup::singleton()->push(
-				new TransformWebPImageJob(
-					$file->getTitle(),
-					[
-						'title' => $file->getTitle(),
-						'width' => $thumb->getWidth(),
-						'height' => $thumb->getHeight(),
-						'overwrite' => true,
-					]
-				)
-			);
+		try {
+			if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
+				JobQueueGroup::singleton()->push(
+					new TransformWebPImageJob(
+						$file->getTitle(),
+						[
+							'title' => $file->getTitle(),
+							'width' => $thumb->getWidth(),
+							'height' => $thumb->getHeight(),
+							'overwrite' => true,
+						]
+					)
+				);
 
+				return;
+			}
+		} catch ( ConfigException $e ) {
 			return;
 		}
 
@@ -159,7 +169,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		return implode( '/', $path );
 	}
 
-	private function moveThumbs( \LocalFile $oldFile, \LocalFile $newFile ): void {
+	private function moveThumbs( LocalFile $oldFile, LocalFile $newFile ): void {
 		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
 
 		$newPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $newFile->getHashPath() );

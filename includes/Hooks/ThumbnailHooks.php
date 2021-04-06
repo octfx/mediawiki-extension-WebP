@@ -22,6 +22,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Hooks;
 
+use ConfigException;
 use FileBackendError;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
 use MediaWiki\Hook\ThumbnailBeforeProduceHTMLHook;
@@ -74,8 +75,12 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 			return;
 		}
 
-		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPCheckAcceptHeader' ) === true && strpos( $request->getRequest()->getHeader( 'ACCEPT' ), 'image/webp' ) === false ) {
-			return;
+		try {
+			if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPCheckAcceptHeader' ) === true && strpos( $request->getRequest()->getHeader( 'ACCEPT' ), 'image/webp' ) === false ) {
+				return;
+			}
+		} catch ( ConfigException $e ) {
+			//
 		}
 
 		if ( isset( $attribs['class'] ) && strpos( $attribs['class'], 'no-webp' ) !== false ) {

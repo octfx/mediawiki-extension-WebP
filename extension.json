@@ -25,7 +25,7 @@
 			"description": "Enables WebP creation after a thumbnail was created",
 			"value": true
 		},
-		"WebPEnableCheckAcceptHeader": {
+		"WebPCheckAcceptHeader": {
 			"description": "Check if the accept header contains webp",
 			"value": false
 		},

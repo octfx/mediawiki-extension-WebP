@@ -101,7 +101,11 @@ class ConvertImages extends Maintenance {
 	}
 
 	private function makeThumbnailJobs( string $title ): array {
-		$sizes = MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPThumbSizes' );
+		try {
+			$sizes = MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPThumbSizes' );
+		} catch ( ConfigException $e ) {
+			$sizes = [];
+		}
 
 		if ( $this->hasOption( 'thumb-sizes' ) ) {
 			$sizes = explode( ',', $this->getOption( 'thumb-sizes', '' ) );
