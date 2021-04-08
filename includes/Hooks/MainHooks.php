@@ -22,17 +22,31 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Hooks;
 
+use Config;
 use ConfigException;
 use ImagickException;
 use JobQueueGroup;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\UploadCompleteHook;
-use MediaWiki\MediaWikiServices;
 use RuntimeException;
 use UploadBase;
 
 class MainHooks implements UploadCompleteHook {
+	/**
+	 * @var Config
+	 */
+	private $mainConfig;
+
+	/**
+	 * FileHooks constructor.
+	 *
+	 * @param Config $mainConfig
+	 */
+	public function __construct( Config $mainConfig ) {
+		$this->mainConfig = $mainConfig;
+	}
+
 	/**
 	 * Create a WebP version of the uploaded file
 	 *
@@ -40,7 +54,7 @@ class MainHooks implements UploadCompleteHook {
 	 */
 	public function onUploadComplete( $uploadBase ): void {
 		try {
-			if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPEnableConvertOnUpload' ) === false ) {
+			if ( $this->mainConfig->get( 'WebPEnableConvertOnUpload' ) === false ) {
 				return;
 			}
 		} catch ( ConfigException $e ) {
@@ -58,7 +72,7 @@ class MainHooks implements UploadCompleteHook {
 		}
 
 		try {
-			if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
+			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
 				JobQueueGroup::singleton()->push(
 					new TransformWebPImageJob(
 						$uploadBase->getTitle(),

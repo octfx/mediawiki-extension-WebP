@@ -22,14 +22,36 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Hooks;
 
+use Config;
 use ConfigException;
 use FileBackendError;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
 use MediaWiki\Hook\ThumbnailBeforeProduceHTMLHook;
-use MediaWiki\MediaWikiServices;
+use RepoGroup;
 use RequestContext;
 
 class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforeProduceHTMLHook {
+	/**
+	 * @var Config
+	 */
+	private $mainConfig;
+
+	/**
+	 * @var RepoGroup
+	 */
+	private $repoGroup;
+
+	/**
+	 * ThumbnailHooks constructor.
+	 *
+	 * @param Config $mainConfig
+	 * @param RepoGroup $repoGroup
+	 */
+	public function __construct( Config $mainConfig, RepoGroup $repoGroup ) {
+		$this->mainConfig = $mainConfig;
+		$this->repoGroup = $repoGroup;
+	}
+
 	/**
 	 * Clean old webp thumbs
 	 * This is taken from LocalFile.php
@@ -76,7 +98,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		}
 
 		try {
-			if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPCheckAcceptHeader' ) === true && strpos( $request->getRequest()->getHeader( 'ACCEPT' ), 'image/webp' ) === false ) {
+			if ( $this->mainConfig->get( 'WebPCheckAcceptHeader' ) === true && strpos( $request->getRequest()->getHeader( 'ACCEPT' ), 'image/webp' ) === false ) {
 				return;
 			}
 		} catch ( ConfigException $e ) {
@@ -113,7 +135,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 			$webP = str_replace( 'images/', 'images/webp/', $webP );
 		}
 
-		if ( MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->fileExists( $pathLocal ) ) {
+		if ( $this->repoGroup->getLocalRepo()->fileExists( $pathLocal ) ) {
 			$attribs['src'] = $webP;
 		}
 	}

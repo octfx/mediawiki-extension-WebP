@@ -58,13 +58,24 @@
 	},
 	"HookHandlers": {
 		"WebPMainHooks": {
-			"class": "MediaWiki\\Extension\\WebP\\Hooks\\MainHooks"
+			"class": "MediaWiki\\Extension\\WebP\\Hooks\\MainHooks",
+			"services": [
+				"MainConfig"
+			]
 		},
 		"WebPFileHooks": {
-			"class": "MediaWiki\\Extension\\WebP\\Hooks\\FileHooks"
+			"class": "MediaWiki\\Extension\\WebP\\Hooks\\FileHooks",
+			"services": [
+				"MainConfig",
+				"RepoGroup"
+			]
 		},
 		"WebPThumbnailHooks": {
-			"class": "MediaWiki\\Extension\\WebP\\Hooks\\ThumbnailHooks"
+			"class": "MediaWiki\\Extension\\WebP\\Hooks\\ThumbnailHooks",
+			"services": [
+				"MainConfig",
+				"RepoGroup"
+			]
 		}
 	},
 	"Hooks": {

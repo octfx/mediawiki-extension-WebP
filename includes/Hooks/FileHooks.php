@@ -22,6 +22,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Hooks;
 
+use Config;
 use ConfigException;
 use ImagickException;
 use JobQueueGroup;
@@ -31,10 +32,31 @@ use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\FileDeleteCompleteHook;
 use MediaWiki\Hook\FileTransformedHook;
 use MediaWiki\Hook\PageMoveCompletingHook;
-use MediaWiki\MediaWikiServices;
+use RepoGroup;
 use RuntimeException;
 
 class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMoveCompletingHook {
+
+	/**
+	 * @var Config
+	 */
+	private $mainConfig;
+
+	/**
+	 * @var RepoGroup
+	 */
+	private $repoGroup;
+
+	/**
+	 * FileHooks constructor.
+	 *
+	 * @param Config $mainConfig
+	 * @param RepoGroup $repoGroup
+	 */
+	public function __construct( Config $mainConfig, RepoGroup $repoGroup ) {
+		$this->mainConfig = $mainConfig;
+		$this->repoGroup = $repoGroup;
+	}
 
 	/**
 	 * Creates a webp version of an image after upload was completed
@@ -45,7 +67,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$oldPath = sprintf( 'mwstore://local-backend/local-public/webp/%s', $file->getHashPath() );
 		$oldThumbPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $file->getHashPath() );
 
-		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+		$repo = $this->repoGroup->getLocalRepo();
 
 		$oldThumbs = $repo->getBackend()->getFileList( [
 			'dir' => $oldThumbPath
@@ -69,7 +91,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	 */
 	public function onFileTransformed( $file, $thumb, $tmpThumbPath, $thumbPath ): void {
 		try {
-			if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPEnableConvertOnTransform' ) === false ) {
+			if ( $this->mainConfig->get( 'WebPEnableConvertOnTransform' ) === false ) {
 				return;
 			}
 		} catch ( ConfigException $e ) {
@@ -87,7 +109,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		}
 
 		try {
-			if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
+			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
 				JobQueueGroup::singleton()->push(
 					new TransformWebPImageJob(
 						$file->getTitle(),
@@ -121,7 +143,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	 * @inheritDoc
 	 */
 	public function onPageMoveCompleting( $old, $new, $user, $pageid, $redirid, $reason, $revision ) {
-		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+		$repo = $this->repoGroup->getLocalRepo();
 
 		$oldFile = $repo->newFile(
 			 $old->getText()
@@ -170,7 +192,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	}
 
 	private function moveThumbs( LocalFile $oldFile, LocalFile $newFile ): void {
-		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+		$repo = $this->repoGroup->getLocalRepo();
 
 		$newPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $newFile->getHashPath() );
 		$oldPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $oldFile->getHashPath() );
