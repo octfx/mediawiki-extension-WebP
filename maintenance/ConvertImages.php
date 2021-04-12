@@ -17,6 +17,7 @@ class ConvertImages extends Maintenance {
 
 		$this->addDescription( 'Creates WebP versions of each uploaded File.' );
 		$this->addOption( 'no-thumbs', 'Disable WebP creation of thumbnails.' );
+		$this->addOption( 'only-thumbs', 'Only create thumbnails.' );
 		$this->addOption( 'thumb-sizes', 'Sizes of thumbs to generate. Provide a comma separated list of sizes like 1000,1200.' );
 		$this->addOption( 'titles', 'Work on these images instead of all. Provide a comma separated list of titles like Title1.jpg,Title2.jpg.' );
 		$this->addOption( 'overwrite', 'Overwrite files if they already exist.' );
@@ -73,13 +74,15 @@ class ConvertImages extends Maintenance {
 				continue;
 			}
 
-			$jobs[] = new TransformWebPImageJob(
-				Title::newFromText( $item->page_title, NS_FILE ),
-				[
-					'title' => $item->page_title,
-					'overwrite' => $this->hasOption( 'overwrite' ),
-				]
-			);
+			if ( !$this->hasOption( 'only-thumbs' ) ) {
+				$jobs[] = new TransformWebPImageJob(
+					Title::newFromText( $item->page_title, NS_FILE ),
+					[
+						'title' => $item->page_title,
+						'overwrite' => $this->hasOption( 'overwrite' ),
+					]
+				);
+			}
 
 			if ( !$this->hasOption( 'no-thumbs' ) ) {
 				$jobs = array_merge( $jobs, $this->makeThumbnailJobs( $item->page_title ) );

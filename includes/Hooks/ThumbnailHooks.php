@@ -58,7 +58,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 	 *
 	 * @inheritDoc
 	 */
-	public function onLocalFilePurgeThumbnails( $file, $archiveName ): void {
+	public function onLocalFilePurgeThumbnails( $file, $archiveName, $urls ): void {
 		$dir = $file->getThumbPath();
 		$backend = $file->getRepo()->getBackend();
 		$files = [];
