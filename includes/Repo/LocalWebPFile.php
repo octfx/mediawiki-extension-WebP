@@ -8,6 +8,17 @@ use LocalFile;
 
 class LocalWebPFile extends LocalFile {
 
+	public function thumbName($params, $flags = 0)
+	{
+		$name = parent::thumbName($params, $flags);
+		$name = explode('.', $name);
+		array_pop($name);
+
+		$name[] = 'webp';
+
+		return implode('.', $name);
+	}
+
 	public function getPath() {
 		$zone = 'webp-public';
 
