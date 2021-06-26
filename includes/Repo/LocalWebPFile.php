@@ -16,12 +16,12 @@ class LocalWebPFile extends LocalFile {
 	 * @return bool|MediaHandler
 	 */
 	public function getHandler() {
-		if ( $this->handler !== null ) {
-			return $this->handler;
-		}
-
 		if ( !in_array( $this->getMimeType(), WebPTransformer::$supportedMimes ) ) {
 			return parent::getHandler();
+		}
+
+		if ( $this->handler !== null ) {
+			return $this->handler;
 		}
 
 		$this->handler = new WebPMediaHandler();
@@ -30,16 +30,23 @@ class LocalWebPFile extends LocalFile {
 	}
 
 	public function getExtension() {
-		return 'webp';
+		if ( in_array( $this->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+			return 'webp';
+		}
+
+		return parent::getExtension();
 	}
 
 	public function transform( $params, $flags = 0 ) {
-		parent::transform( $params, $flags );
+		$transformed = parent::transform( $params, $flags );
 
-		// TODO: This is such a wrong fix
+		if ($transformed === false) {
+			return $transformed;
+		}
+
 		return new ThumbnailImage( $this, $this->getUrl(), $this->getThumbPath( $this->thumbName( $params ) ), [
-			'width' => $params['width'],
-			'height' => $params['height'] ?? 0,
+			'width' => $transformed->getWidth(),
+			'height' => $transformed->getHeight(),
 		] );
 	}
 
@@ -68,6 +75,23 @@ class LocalWebPFile extends LocalFile {
 		return $this->path;
 	}
 
+	public function getThumbUrl($suffix = false)
+	{
+		if ( !in_array( $this->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+			return parent::getThumbUrl($suffix);
+		}
+
+		$ext = $this->getExtension();
+		$path = $this->repo->getZoneUrl( 'webp-thumb', $ext ) . '/' . $this->getUrlRel();
+		if ( $suffix !== false ) {
+			$path .= '/' . rawurlencode( $suffix );
+		}
+
+		throw new \Exception($path);
+
+		return $path;
+	}
+
 	public function getThumbPath( $suffix = false ) {
 		if ( $suffix !== false ) {
 			$suffix = explode( '.', $suffix );
@@ -79,7 +103,7 @@ class LocalWebPFile extends LocalFile {
 			$suffix = implode( '.', $suffix );
 		}
 
+		//throw new \Exception(json_encode($this->repo->getZonePath( 'thumb' ) . '/webp/' . $this->getThumbRel( $suffix )));
 		return $this->repo->getZonePath( 'thumb' ) . '/webp/' . $this->getThumbRel( $suffix );
 	}
-
 }

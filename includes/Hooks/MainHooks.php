@@ -26,6 +26,7 @@ use Config;
 use ConfigException;
 use ImagickException;
 use JobQueueGroup;
+use MediaWiki\Extension\WebP\Repo\LocalWebPFileRepo;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\UploadCompleteHook;
@@ -45,6 +46,12 @@ class MainHooks implements UploadCompleteHook {
 	 */
 	public function __construct( Config $mainConfig ) {
 		$this->mainConfig = $mainConfig;
+	}
+
+	public static function setup() {
+		global $wgLocalFileRepo;
+
+		$wgLocalFileRepo['class'] = LocalWebPFileRepo::class;
 	}
 
 	/**

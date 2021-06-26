@@ -56,6 +56,9 @@
 			]
 		}
 	},
+	"ExtensionFunctions": [
+		"MediaWiki\\Extension\\WebP\\Hooks\\MainHooks::setup"
+	],
 	"HookHandlers": {
 		"WebPMainHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\MainHooks",
@@ -83,7 +86,7 @@
 		"FileDeleteComplete": "WebPFileHooks",
 		"PageMoveCompleting": "WebPFileHooks",
 		"UploadComplete": "WebPMainHooks",
-		"ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
+		"-ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
 		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"
 	},
 	"MessagesDirs": {
