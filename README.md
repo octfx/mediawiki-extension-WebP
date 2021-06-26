@@ -46,21 +46,10 @@ $wgWebPAutoFilter = true;
 $wgWebPConvertInJobQueue = true;
 $wgWebPEnableConvertOnUpload = true;
 $wgWebPEnableConvertOnTransform = true;
-
-
-$wgLocalFileRepo = [
-    'class' => \MediaWiki\Extension\WebP\Repo\LocalWebPFileRepo::class,
-    'name' => 'local',
-    'directory' => $wgUploadDirectory,
-    'scriptDirUrl' => $wgScriptPath,
-    'url' => $wgUploadBaseUrl ? $wgUploadBaseUrl . $wgUploadPath : $wgUploadPath,
-    'hashLevels' => $wgHashedUploadDirectory ? 2 : 0,
-    'thumbScriptUrl' => $wgThumbnailScriptPath,
-    'transformVia404' => false,
-    'deletedDir' => "{$wgUploadDirectory}/deleted",
-    'deletedHashLevels' => $wgHashedUploadDirectory ? 3 : 0
-];
 ```
+
+**Note: This extension registers itself as a local file repo!**  
+`$wgLocalFileRepo['class'] = LocalWebPFileRepo::class;`
 
 ## De-Installation
 Delete the folders `images/webp` and `images/thumbs/webp` and remove the extension.

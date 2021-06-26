@@ -8,6 +8,7 @@ use LocalFile;
 use MediaHandler;
 use MediaWiki\Extension\WebP\WebPMediaHandler;
 use MediaWiki\Extension\WebP\WebPTransformer;
+use MediaWiki\MediaWikiServices;
 use ThumbnailImage;
 
 class LocalWebPFile extends LocalFile {
@@ -40,11 +41,16 @@ class LocalWebPFile extends LocalFile {
 	public function transform( $params, $flags = 0 ) {
 		$transformed = parent::transform( $params, $flags );
 
-		if ($transformed === false) {
+		if ( $transformed === false ) {
 			return $transformed;
 		}
 
-		return new ThumbnailImage( $this, $this->getUrl(), $this->getThumbPath( $this->thumbName( $params ) ), [
+		$url = $this->getUrl();
+		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'ThumbnailScriptPath' ) !== false ) {
+			$url = $transformed->getUrl();
+		}
+
+		return new ThumbnailImage( $this, $url, $this->getThumbPath( $this->thumbName( $params ) ), [
 			'width' => $transformed->getWidth(),
 			'height' => $transformed->getHeight(),
 		] );
@@ -75,10 +81,9 @@ class LocalWebPFile extends LocalFile {
 		return $this->path;
 	}
 
-	public function getThumbUrl($suffix = false)
-	{
+	public function getThumbUrl( $suffix = false ) {
 		if ( !in_array( $this->getMimeType(), WebPTransformer::$supportedMimes ) ) {
-			return parent::getThumbUrl($suffix);
+			return parent::getThumbUrl( $suffix );
 		}
 
 		$ext = $this->getExtension();
@@ -86,8 +91,6 @@ class LocalWebPFile extends LocalFile {
 		if ( $suffix !== false ) {
 			$path .= '/' . rawurlencode( $suffix );
 		}
-
-		throw new \Exception($path);
 
 		return $path;
 	}
@@ -103,7 +106,7 @@ class LocalWebPFile extends LocalFile {
 			$suffix = implode( '.', $suffix );
 		}
 
-		//throw new \Exception(json_encode($this->repo->getZonePath( 'thumb' ) . '/webp/' . $this->getThumbRel( $suffix )));
+		// throw new \Exception(json_encode($this->repo->getZonePath( 'thumb' ) . '/webp/' . $this->getThumbRel( $suffix )));
 		return $this->repo->getZonePath( 'thumb' ) . '/webp/' . $this->getThumbRel( $suffix );
 	}
 }

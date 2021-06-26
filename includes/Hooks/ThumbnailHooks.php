@@ -25,7 +25,6 @@ namespace MediaWiki\Extension\WebP\Hooks;
 use Config;
 use ConfigException;
 use FileBackendError;
-use MediaWiki\Extension\WebP\Repo\LocalWebPFile;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
 use MediaWiki\Hook\ThumbnailBeforeProduceHTMLHook;
 use RepoGroup;
