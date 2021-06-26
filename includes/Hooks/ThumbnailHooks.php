@@ -25,6 +25,7 @@ namespace MediaWiki\Extension\WebP\Hooks;
 use Config;
 use ConfigException;
 use FileBackendError;
+use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
 use MediaWiki\Hook\ThumbnailBeforeProduceHTMLHook;
 use RepoGroup;
@@ -92,6 +93,10 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 	 */
 	public function onThumbnailBeforeProduceHTML( $thumbnail, &$attribs, &$linkAttribs ): void {
 		$request = RequestContext::getMain();
+
+		if ( !WebPTransformer::canTransform( $thumbnail->getFile() ) ) {
+			return;
+		}
 
 		if ( $request === null || $request->getRequest()->getHeader( 'ACCEPT' ) === false ) {
 			return;

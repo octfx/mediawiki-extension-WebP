@@ -49,7 +49,7 @@ class WebPTransformer {
 	public function __construct( File $file, array $options = [] ) {
 		$this->checkImagickInstalled();
 
-		if ( !in_array( $file->getMimeType(), self::$supportedMimes ) ) {
+		if ( !self::canTransform( $file ) ) {
 			throw new RuntimeException(
 				'Mimetype "%s" is not in supported mime: [%s]',
 				$file->getMimeType(),
@@ -153,6 +153,14 @@ class WebPTransformer {
 			'webp',
 			$path
 		);
+	}
+
+	/**
+	 * @param File $file
+	 * @return bool
+	 */
+	public static function canTransform( File $file ): bool {
+		return in_array( $file->getMimeType(), self::$supportedMimes );
 	}
 
 	/**

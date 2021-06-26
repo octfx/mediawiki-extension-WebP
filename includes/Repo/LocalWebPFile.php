@@ -17,7 +17,7 @@ class LocalWebPFile extends LocalFile {
 	 * @return bool|MediaHandler
 	 */
 	public function getHandler() {
-		if ( !in_array( $this->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+		if ( !WebPTransformer::canTransform( $this ) ) {
 			return parent::getHandler();
 		}
 
@@ -31,7 +31,7 @@ class LocalWebPFile extends LocalFile {
 	}
 
 	public function getExtension() {
-		if ( in_array( $this->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+		if ( WebPTransformer::canTransform( $this ) ) {
 			return 'webp';
 		}
 
@@ -41,7 +41,7 @@ class LocalWebPFile extends LocalFile {
 	public function transform( $params, $flags = 0 ) {
 		$transformed = parent::transform( $params, $flags );
 
-		if ( $transformed === false ) {
+		if ( $transformed === false || !WebPTransformer::canTransform( $this ) ) {
 			return $transformed;
 		}
 
@@ -57,6 +57,10 @@ class LocalWebPFile extends LocalFile {
 	}
 
 	public function getThumbDisposition( $thumbName, $dispositionType = 'inline' ) {
+		if ( !WebPTransformer::canTransform( $this ) ) {
+			return parent::getThumbDisposition( $thumbName, $dispositionType );
+		}
+
 		$parts = [];
 
 		$parts[] = 'attachment';
@@ -67,6 +71,10 @@ class LocalWebPFile extends LocalFile {
 	}
 
 	public function getPath() {
+		if ( !WebPTransformer::canTransform( $this ) ) {
+			return parent::getPath();
+		}
+
 		$zone = 'webp-public';
 
 		if ( $this->repo->fileExists( $this->repo->getZonePath( $zone ) . '/' . $this->getRel() ) ) {
@@ -82,7 +90,7 @@ class LocalWebPFile extends LocalFile {
 	}
 
 	public function getThumbUrl( $suffix = false ) {
-		if ( !in_array( $this->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+		if ( !WebPTransformer::canTransform( $this ) ) {
 			return parent::getThumbUrl( $suffix );
 		}
 
@@ -96,6 +104,10 @@ class LocalWebPFile extends LocalFile {
 	}
 
 	public function getThumbPath( $suffix = false ) {
+		if ( !WebPTransformer::canTransform( $this ) ) {
+			return parent::getThumbPath( $suffix );
+		}
+
 		if ( $suffix !== false ) {
 			$suffix = explode( '.', $suffix );
 

@@ -69,7 +69,7 @@ class MainHooks implements UploadCompleteHook {
 			return;
 		}
 
-		if ( $uploadBase->getLocalFile() === null || !in_array( $uploadBase->getLocalFile()->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+		if ( $uploadBase->getLocalFile() === null || !WebPTransformer::canTransform( $uploadBase->getLocalFile() ) ) {
 			return;
 		}
 
