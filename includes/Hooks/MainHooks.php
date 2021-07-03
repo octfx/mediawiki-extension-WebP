@@ -48,7 +48,10 @@ class MainHooks implements UploadCompleteHook {
 		$this->mainConfig = $mainConfig;
 	}
 
-	public static function setup() {
+	/**
+	 * Registers the extension as a local file repo
+	 */
+	public static function setup(): void {
 		global $wgLocalFileRepo, $wgGenerateThumbnailOnParse;
 
 		$wgLocalFileRepo['class'] = LocalWebPFileRepo::class;
