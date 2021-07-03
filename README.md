@@ -1,11 +1,13 @@
 # WebP Extension
 Still somewhat experimental.
 
-Upon file upload this extensions creates a WebP version of the uploaded image.
+Upon file upload this extension creates a WebP version of the uploaded image.
 
 If an WebP file exists, and the browser supports WebP images, the link for the current image is changed for the webp version.
 
 Requires a usable version of imagick and `libwebp` installed.
+
+This extension works best when thumbnail generation through [`thumb.php`](https://www.mediawiki.org/wiki/Manual:Thumb.php) is enabled.
 
 ## Converting already uploaded images
 A maintenance script exists to convert already uploaded images:
