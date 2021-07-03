@@ -2,9 +2,29 @@
 
 declare( strict_types=1 );
 
+/**
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * @file
+ */
+
 namespace MediaWiki\Extension\WebP\Repo;
 
-class LocalWebPFileRepo extends \LocalRepo {
+use LocalRepo;
+
+class LocalWebPFileRepo extends LocalRepo {
 
 	public function __construct( array $info = null ) {
 		$this->fileFactory = [ LocalWebPFile::class, 'newFromTitle' ];
@@ -47,11 +67,20 @@ class LocalWebPFileRepo extends \LocalRepo {
 	}
 
 	/**
+	 * This is just a wrapper for the parent method, removing the '-webp' part
+	 *
+	 * @inheritDoc
+	 */
+	public function getZoneUrl( $zone, $ext = null ) {
+		return parent::getZoneUrl( str_replace( 'webp-', '', $zone ), $ext );
+	}
+
+	/**
 	 * @param string $file
 	 * @return bool
 	 */
 	public function fileExists( $file ) {
-		$base = str_replace( '-webp', '', $file );
+		$base = str_replace( 'webp-', '', $file );
 
 		return ( parent::fileExists( $base ) || parent::fileExists( $file ) );
 	}

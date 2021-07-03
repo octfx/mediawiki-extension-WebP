@@ -86,7 +86,7 @@
 		"FileDeleteComplete": "WebPFileHooks",
 		"PageMoveCompleting": "WebPFileHooks",
 		"UploadComplete": "WebPMainHooks",
-		"-ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
+		"ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
 		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"
 	},
 	"MessagesDirs": {
