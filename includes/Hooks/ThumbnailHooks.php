@@ -94,7 +94,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 	public function onThumbnailBeforeProduceHTML( $thumbnail, &$attribs, &$linkAttribs ): void {
 		$request = RequestContext::getMain();
 
-		if ( !WebPTransformer::canTransform( $thumbnail->getFile() ) ) {
+		if ( !WebPTransformer::canTransform( $thumbnail->getFile() ) || $thumbnail->getFile() === false || $thumbnail->getUrl() === false ) {
 			return;
 		}
 
@@ -111,11 +111,6 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		}
 
 		if ( isset( $attribs['class'] ) && strpos( $attribs['class'], 'no-webp' ) !== false ) {
-			return;
-		}
-
-		$file = $thumbnail->getFile();
-		if ( $file === false ) {
 			return;
 		}
 
