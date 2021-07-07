@@ -23,6 +23,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\WebP\Repo;
 
 use LocalRepo;
+use MediaWiki\Extension\WebP\WebPTransformer;
 
 class LocalWebPFileRepo extends LocalRepo {
 
@@ -80,8 +81,23 @@ class LocalWebPFileRepo extends LocalRepo {
 	 * @return bool
 	 */
 	public function fileExists( $file ) {
-		$base = str_replace( 'webp-', '', $file );
+		$base = str_replace( 'webp/', '', $file );
+
+		if ( strpos( $file, 'thumb' ) === false ) {
+			$file = WebPTransformer::changeExtensionWebp( $file );
+		}
 
 		return ( parent::fileExists( $base ) || parent::fileExists( $file ) );
+	}
+
+	public function getLocalReference( $virtualUrl ) {
+		if ( strpos( $virtualUrl, '/webp' ) !== false ) {
+			$referenceWebP = parent::getLocalReference( WebPTransformer::changeExtensionWebp( $virtualUrl ) );
+			if ( $referenceWebP !== null ) {
+				return $referenceWebP;
+			}
+		}
+
+		return parent::getLocalReference( $virtualUrl );
 	}
 }

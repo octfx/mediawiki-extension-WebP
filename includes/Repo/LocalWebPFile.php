@@ -44,7 +44,7 @@ class LocalWebPFile extends LocalFile {
 			return parent::getHandler();
 		}
 
-		if ( $this->handler !== null ) {
+		if ( $this->handler !== null && $this->handler instanceof WebPMediaHandler ) {
 			return $this->handler;
 		}
 
@@ -68,6 +68,7 @@ class LocalWebPFile extends LocalFile {
 
 	/**
 	 * Get the transformed image
+	 * TODO: Return link to base webp file, if requested size > base size
 	 *
 	 * @param array $params
 	 * @param int $flags
@@ -76,7 +77,7 @@ class LocalWebPFile extends LocalFile {
 	public function transform( $params, $flags = 0 ) {
 		$transformed = parent::transform( $params, $flags );
 
-		if ( $transformed === false || !WebPTransformer::canTransform( $this ) ) {
+		if ( $transformed === false || !WebPTransformer::canTransform( $this ) || $transformed->getWidth() >= $this->getWidth() ) {
 			return $transformed;
 		}
 
@@ -152,6 +153,7 @@ class LocalWebPFile extends LocalFile {
 
 		$ext = $this->getExtension();
 		$path = $this->repo->getZoneUrl( 'webp-thumb', $ext ) . '/' . $this->getUrlRel();
+
 		if ( $suffix !== false ) {
 			$path .= '/' . rawurlencode( $suffix );
 		}
@@ -162,7 +164,7 @@ class LocalWebPFile extends LocalFile {
 	/**
 	 * Returns the path to the local thumb
 	 *
-	 * @param false $suffix
+	 * @param string|false $suffix
 	 * @return string
 	 */
 	public function getThumbPath( $suffix = false ) {
@@ -171,15 +173,10 @@ class LocalWebPFile extends LocalFile {
 		}
 
 		if ( $suffix !== false ) {
-			$suffix = explode( '.', $suffix );
-
-			array_pop( $suffix );
-
-			$suffix[] = 'webp';
-
-			$suffix = implode( '.', $suffix );
+			$suffix = WebPTransformer::changeExtensionWebp( $suffix );
 		}
 
-		return $this->repo->getZonePath( 'thumb' ) . '/webp/' . $this->getThumbRel( $suffix );
+		return $this->repo->getZonePath( 'webp-thumb' ) . '/' . $this->getThumbRel( $suffix );
 	}
+
 }
