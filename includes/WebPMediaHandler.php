@@ -39,6 +39,10 @@ class WebPMediaHandler extends WebPHandler {
 			$params['physicalHeight'] ?? $image->getHeight()
 		);
 
+		if ( isset( $params['dstPath'] ) ) {
+			$dimensions->setStoragePath( $params['dstPath'] );
+		}
+
 		$transformer = new WebPTransformer( $image );
 
 		return !$transformer->transformLikeThumb( $dimensions )->isOK();

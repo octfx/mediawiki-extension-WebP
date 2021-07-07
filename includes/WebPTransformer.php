@@ -89,7 +89,9 @@ class WebPTransformer {
 	 * @throws ImagickException
 	 */
 	public function transformLikeThumb( MediaTransformOutput $thumb ): Status {
-		$tempFile = $this->getTempFilePath();
+		if ( $thumb->getStoragePath() === false ) {
+			$thumb->setStoragePath( $this->getTempFilePath() );
+		}
 
 		$out = sprintf(
 			'%s%s/%dpx-%s',
@@ -103,14 +105,14 @@ class WebPTransformer {
 			return Status::newGood();
 		}
 
-		$result = $this->transformImage( $tempFile, (int)$thumb->getWidth() );
+		$result = $this->transformImage( $thumb->getStoragePath(), (int)$thumb->getWidth() );
 
 		if ( !$result ) {
 			return Status::newFatal( 'Could not convert Image' );
 		}
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
-			$tempFile,
+			$thumb->getStoragePath(),
 			'webp-thumb',
 			$out,
 			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
