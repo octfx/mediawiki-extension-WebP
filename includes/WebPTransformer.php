@@ -115,7 +115,7 @@ class WebPTransformer {
 			$thumb->getStoragePath(),
 			'webp-thumb',
 			$out,
-			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
+			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
 
 		$this->logStatus( $status );
@@ -135,7 +135,7 @@ class WebPTransformer {
 
 		$out = sprintf(
 			'%s/%s',
-			$this->file->getHashPath(),
+			rtrim( $this->file->getHashPath(), '/' ),
 			self::changeExtensionWebp( $this->file->getName() )
 		);
 
@@ -148,11 +148,12 @@ class WebPTransformer {
 		if ( !$result ) {
 			return Status::newFatal( 'Could not convert Image' );
 		}
+
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
 			'webp-public',
 			$out,
-			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
+			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
 
 		$this->logStatus( $status );

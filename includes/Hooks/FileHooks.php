@@ -91,7 +91,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	 */
 	public function onFileTransformed( $file, $thumb, $tmpThumbPath, $thumbPath ): void {
 		try {
-			if ( $this->mainConfig->get( 'WebPEnableConvertOnTransform' ) === false || $this->mainConfig->get( 'ThumbnailScriptPath' ) !== false ) {
+			if ( $this->mainConfig->get( 'WebPEnableConvertOnTransform' ) === false ) {
 				return;
 			}
 		} catch ( ConfigException $e ) {

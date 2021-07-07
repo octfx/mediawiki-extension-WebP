@@ -93,11 +93,12 @@ class LocalWebPFileRepo extends LocalRepo {
 	public function getLocalReference( $virtualUrl ) {
 		if ( strpos( $virtualUrl, '/webp' ) !== false ) {
 			$referenceWebP = parent::getLocalReference( WebPTransformer::changeExtensionWebp( $virtualUrl ) );
+
 			if ( $referenceWebP !== null ) {
 				return $referenceWebP;
 			}
 		}
 
-		return parent::getLocalReference( $virtualUrl );
+		return parent::getLocalReference( str_replace( '/webp', '', $virtualUrl ) );
 	}
 }

@@ -59,7 +59,7 @@ class TransformWebPImageJob extends Job {
 		}
 
 		try {
-			$transformer = new WebPTransformer( $file, [ 'overwrite' => isset( $this->params['overwrite'] ) ] );
+			$transformer = new WebPTransformer( $file, [ 'overwrite' => $this->params['overwrite'] ?? false ] );
 		} catch ( RuntimeException $e ) {
 			$this->setLastError( $e->getMessage() );
 			return false;
@@ -68,6 +68,7 @@ class TransformWebPImageJob extends Job {
 		try {
 			if ( isset( $this->params['width'] ) ) {
 				$fakeThumb = new FakeMediaTransformOutput( (int)$this->params['width'], (int)$this->params['height'] );
+
 				$status = $transformer->transformLikeThumb( $fakeThumb );
 			} else {
 				$status = $transformer->transform();
