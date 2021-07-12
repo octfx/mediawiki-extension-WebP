@@ -36,6 +36,7 @@ use MediaWiki\Shell\Shell;
 use MediaWiki\ShellDisabledError;
 use RuntimeException;
 use Status;
+use TempFSFile;
 
 /**
  * Main class for transforming images into webp files
@@ -89,9 +90,7 @@ class WebPTransformer {
 	 * @throws ImagickException
 	 */
 	public function transformLikeThumb( MediaTransformOutput $thumb ): Status {
-		if ( $thumb->getStoragePath() === false ) {
-			$thumb->setStoragePath( $this->getTempFilePath() );
-		}
+		$tempFile = $this->getTempFile();
 
 		$out = sprintf(
 			'%s%s/%dpx-%s',
@@ -105,14 +104,14 @@ class WebPTransformer {
 			return Status::newGood();
 		}
 
-		$result = $this->transformImage( $thumb->getStoragePath(), (int)$thumb->getWidth() );
+		$result = $this->transformImage( $tempFile, (int)$thumb->getWidth() );
 
 		if ( !$result ) {
 			return Status::newFatal( 'Could not convert Image' );
 		}
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
-			$thumb->getStoragePath(),
+			$tempFile,
 			'webp-thumb',
 			$out,
 			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
@@ -131,7 +130,7 @@ class WebPTransformer {
 	 * @throws ImagickException
 	 */
 	public function transform(): Status {
-		$tempFile = $this->getTempFilePath();
+		$tempFile = $this->getTempFile();
 
 		$out = sprintf(
 			'%s/%s',
@@ -205,13 +204,17 @@ class WebPTransformer {
 	}
 
 	/**
-	 * @param string $outPath
+	 * @param TempFSFile|string $outPath
 	 * @param int $width
 	 *
 	 * @return bool
 	 * @throws ImagickException
 	 */
-	private function transformImage( string $outPath, int $width = -1 ): bool {
+	private function transformImage( $outPath, int $width = -1 ): bool {
+		if ( $outPath instanceof TempFSFile ) {
+			$outPath = $outPath->getPath();
+		}
+
 		$cwebpResult = $this->transformCwebp( $outPath, $width );
 
 		if ( !$cwebpResult ) {
@@ -314,18 +317,18 @@ class WebPTransformer {
 	}
 
 	/**
-	 * Get a temp file path for storing transformations
+	 * Get a temp file for storing transformations
 	 *
-	 * @return string
+	 * @return TempFSFile
 	 */
-	private function getTempFilePath(): string {
+	private function getTempFile(): TempFSFile {
 		$tempFSFile = MediaWikiServices::getInstance()->getTempFSFileFactory()->newTempFSFile( 'webp', 'webp' );
 
 		if ( $tempFSFile === null ) {
 			throw new RuntimeException( 'Could not get a new temp file' );
 		}
 
-		return $tempFSFile->getPath();
+		return $tempFSFile;
 	}
 
 	/**

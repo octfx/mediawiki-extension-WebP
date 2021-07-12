@@ -41,12 +41,11 @@ class LocalWebPFileRepo extends LocalRepo {
 	 * @return string|null Returns null if the zone is not defined
 	 */
 	public function getZonePath( $zone ) {
-		$isWebP = false;
-
-		if ( strpos( $zone, 'webp-' ) !== false ) {
-			$isWebP = true;
-			$zone = str_replace( 'webp-', '', $zone );
+		if ( strpos( $zone, 'webp-' ) === false ) {
+			return parent::getZonePath( $zone );
 		}
+
+		$zone = str_replace( 'webp-', '', $zone );
 
 		[ $container, $base ] = $this->getZoneLocation( $zone );
 
@@ -56,12 +55,10 @@ class LocalWebPFileRepo extends LocalRepo {
 
 		$backendName = $this->backend->getName();
 
+		$container = sprintf( '%s/webp', $container );
+
 		if ( $base !== '' ) { // may not be set
 			$base = "/{$base}";
-		}
-
-		if ( $isWebP ) {
-		   $container = sprintf( '%s/webp', $container );
 		}
 
 		return "mwstore://$backendName/{$container}{$base}";
@@ -86,6 +83,9 @@ class LocalWebPFileRepo extends LocalRepo {
 		if ( strpos( $file, 'thumb' ) === false ) {
 			$file = WebPTransformer::changeExtensionWebp( $file );
 		}
+
+		wfDebugLog( 'WebP', 'File Exists: Base ' . $base );
+		wfDebugLog( 'WebP', 'File Exists: Webp ' . $file );
 
 		return ( parent::fileExists( $base ) || parent::fileExists( $file ) );
 	}

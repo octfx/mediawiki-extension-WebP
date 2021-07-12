@@ -30,6 +30,7 @@ use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
 use MediaWiki\Hook\ThumbnailBeforeProduceHTMLHook;
 use RepoGroup;
 use RequestContext;
+use ThumbnailImage;
 
 class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforeProduceHTMLHook {
 	/**
@@ -94,20 +95,8 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 	public function onThumbnailBeforeProduceHTML( $thumbnail, &$attribs, &$linkAttribs ): void {
 		$request = RequestContext::getMain();
 
-		if ( !WebPTransformer::canTransform( $thumbnail->getFile() ) || $thumbnail->getFile() === false || $thumbnail->getUrl() === false ) {
+		if ( $this->shouldSkipThumbnailHook( $thumbnail, $request ) ) {
 			return;
-		}
-
-		if ( $request === null || $request->getRequest()->getHeader( 'ACCEPT' ) === false ) {
-			return;
-		}
-
-		try {
-			if ( $this->mainConfig->get( 'WebPCheckAcceptHeader' ) === true && strpos( $request->getRequest()->getHeader( 'ACCEPT' ), 'image/webp' ) === false ) {
-				return;
-			}
-		} catch ( ConfigException $e ) {
-			//
 		}
 
 		if ( isset( $attribs['class'] ) && strpos( $attribs['class'], 'no-webp' ) !== false ) {
@@ -138,5 +127,36 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		if ( $this->repoGroup->getLocalRepo()->fileExists( $pathLocal ) ) {
 			$attribs['src'] = $webP;
 		}
+	}
+
+	/**
+	 * Skip the hook if the file in question can't be transformed,
+	 * the thumbnail has no image or no url
+	 *
+	 * or if the accept header should be checked and it does not contain webp
+	 *
+	 * @param ThumbnailImage $thumbnail
+	 * @param ?RequestContext $request
+	 * @return bool True if hook should be skipped
+	 */
+	private function shouldSkipThumbnailHook( ThumbnailImage $thumbnail, ?RequestContext $request ): bool {
+		if ( !WebPTransformer::canTransform( $thumbnail->getFile() ) ||
+			$thumbnail->getFile() === false ||
+			$thumbnail->getUrl() === false ||
+			strpos( $thumbnail->getUrl(), 'thumb.php' ) !== false
+		) {
+			return true;
+		}
+
+		try {
+			$accept = $request === null ? '' : $request->getRequest()->getHeader( 'ACCEPT' );
+			if ( $this->mainConfig->get( 'WebPCheckAcceptHeader' ) === true && strpos( $accept, 'image/webp' ) === false ) {
+				return true;
+			}
+		} catch ( ConfigException $e ) {
+			//
+		}
+
+		return false;
 	}
 }
