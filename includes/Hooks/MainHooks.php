@@ -55,15 +55,9 @@ class MainHooks implements UploadCompleteHook {
 		global $wgLocalFileRepo, $wgGenerateThumbnailOnParse;
 
 		$wgLocalFileRepo['class'] = LocalWebPFileRepo::class;
+		$wgLocalFileRepo['name'] = 'local';
 		$wgLocalFileRepo['transformVia404'] = !$wgGenerateThumbnailOnParse;
-
-		if ( !isset( $wgLocalFileRepo['name'] ) ) {
-			$wgLocalFileRepo['name'] = 'local';
-		}
-
-		if ( !isset( $wgLocalFileRepo['backend'] ) ) {
-			$wgLocalFileRepo['backend'] = $wgLocalFileRepo['name'] . '-backend';
-		}
+		$wgLocalFileRepo['backend'] = $wgLocalFileRepo['name'] . '-backend';
 	}
 
 	/**
