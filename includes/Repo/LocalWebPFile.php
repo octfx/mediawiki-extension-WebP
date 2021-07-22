@@ -59,11 +59,11 @@ class LocalWebPFile extends LocalFile {
 	 * @return string
 	 */
 	public function getExtension() {
-		if ( WebPTransformer::canTransform( $this ) ) {
-			return 'webp';
+		if ( !WebPTransformer::canTransform( $this ) ) {
+			return parent::getExtension();
 		}
 
-		return parent::getExtension();
+		return 'webp';
 	}
 
 	/**
@@ -78,6 +78,8 @@ class LocalWebPFile extends LocalFile {
 		$transformed = parent::transform( $params, $flags );
 
 		if ( $transformed === false || !WebPTransformer::canTransform( $this ) || $transformed->getWidth() >= $this->getWidth() ) {
+			wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning parent transform for "%s"', 'LocalWebPFile', __FUNCTION__, $this->getName() ) );
+
 			return $transformed;
 		}
 
@@ -87,6 +89,16 @@ class LocalWebPFile extends LocalFile {
 		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'ThumbnailScriptPath' ) !== false ) {
 			$url = $transformed->getUrl();
 		}
+
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Returning webp transform for "%s"', 'LocalWebPFile', __FUNCTION__, $this->getName() ),
+			'all',
+			[
+				'url' => $url,
+				'path' => $this->getThumbPath( $this->thumbName( $params ) ),
+			]
+		);
 
 		return new ThumbnailImage( $this, $url, $this->getThumbPath( $this->thumbName( $params ) ), [
 			'width' => $transformed->getWidth(),
@@ -152,13 +164,15 @@ class LocalWebPFile extends LocalFile {
 		}
 
 		$ext = $this->getExtension();
-		$path = $this->repo->getZoneUrl( 'webp-thumb', $ext ) . '/' . $this->getUrlRel();
+		$url = $this->repo->getZoneUrl( 'webp-thumb', $ext ) . '/' . $this->getUrlRel();
 
 		if ( $suffix !== false ) {
-			$path .= '/' . rawurlencode( $suffix );
+			$url .= '/' . rawurlencode( WebPTransformer::changeExtensionWebp( $suffix ) );
 		}
 
-		return $path;
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning thumb url "%s" for "%s"', 'LocalWebPFile', __FUNCTION__, $url, $this->getName() ) );
+
+		return $url;
 	}
 
 	/**
@@ -176,7 +190,11 @@ class LocalWebPFile extends LocalFile {
 			$suffix = WebPTransformer::changeExtensionWebp( $suffix );
 		}
 
-		return $this->repo->getZonePath( 'webp-thumb' ) . '/' . $this->getThumbRel( $suffix );
+		$path = $this->repo->getZonePath( 'webp-thumb' ) . '/' . $this->getThumbRel( $suffix );
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning thumb path "%s" for "%s"', 'LocalWebPFile', __FUNCTION__, $path, $this->getName() ) );
+
+		return $path;
 	}
 
 }

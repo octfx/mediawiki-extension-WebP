@@ -22,6 +22,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Repo;
 
+use FSFile;
 use LocalRepo;
 use MediaWiki\Extension\WebP\WebPTransformer;
 
@@ -61,40 +62,60 @@ class LocalWebPFileRepo extends LocalRepo {
 			$base = "/{$base}";
 		}
 
-		return "mwstore://$backendName/{$container}{$base}";
+		$path = "mwstore://$backendName/{$container}{$base}";
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning zone path "%s"', 'LocalWebPFileRepo', __FUNCTION__, $path ) );
+
+		return $path;
 	}
 
 	/**
-	 * This is just a wrapper for the parent method, removing the '-webp' part
+	 * Returns the corresponding zone url for the basic zones
+	 * Appends /webp if required
 	 *
 	 * @inheritDoc
 	 */
 	public function getZoneUrl( $zone, $ext = null ) {
-		return parent::getZoneUrl( str_replace( 'webp-', '', $zone ), $ext );
+		$url = parent::getZoneUrl( str_replace( 'webp-', '', $zone ), $ext );
+
+		if ( strpos( $zone, 'webp-' ) !== false ) {
+			$url .= '/webp';
+		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning zone url "%s" for zone "%s"', 'LocalWebPFileRepo', __FUNCTION__, $url, $zone ) );
+
+		return $url;
 	}
 
 	/**
 	 * @param string $file
 	 * @return bool
 	 */
-	public function fileExists( $file ) {
-		$base = str_replace( 'webp/', '', $file );
+	public function fileExists( $file ): bool {
+		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
-		if ( strpos( $file, 'thumb' ) === false ) {
+		if ( in_array( $ext, [ 'png', 'jpg', 'jpeg' ], true ) ) {
 			$file = WebPTransformer::changeExtensionWebp( $file );
 		}
 
-		wfDebugLog( 'WebP', 'File Exists: Base ' . $base );
-		wfDebugLog( 'WebP', 'File Exists: Webp ' . $file );
+		$exists = parent::fileExists( $file );
 
-		return ( parent::fileExists( $base ) || parent::fileExists( $file ) );
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] File "%s" exists: %b', 'LocalWebPFileRepo', __FUNCTION__, $file, $exists ) );
+
+		return $exists;
 	}
 
+	/**
+	 * @param string $virtualUrl
+	 * @return FSFile|null
+	 */
 	public function getLocalReference( $virtualUrl ) {
 		if ( strpos( $virtualUrl, '/webp' ) !== false ) {
 			$referenceWebP = parent::getLocalReference( WebPTransformer::changeExtensionWebp( $virtualUrl ) );
 
 			if ( $referenceWebP !== null ) {
+				wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning local webp reference for url "%s"', 'LocalWebPFileRepo', __FUNCTION__, $virtualUrl ) );
+
 				return $referenceWebP;
 			}
 		}
