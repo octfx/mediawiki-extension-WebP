@@ -96,6 +96,8 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		$request = RequestContext::getMain();
 
 		if ( $this->shouldSkipThumbnailHook( $thumbnail, $request ) ) {
+			wfDebugLog( 'WebP', sprintf( '[%s::%s] Skipping ThumbnailHook for "%s"', 'ThumbnailHooks', __FUNCTION__, $thumbnail->getUrl() ) );
+
 			return;
 		}
 
@@ -123,6 +125,8 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		} else {
 			$webP = str_replace( 'images/', 'images/webp/', $webP );
 		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Path local is "%s"; WebP Url is "%s"', 'ThumbnailHooks', __FUNCTION__, $pathLocal, $webP ) );
 
 		if ( $this->repoGroup->getLocalRepo()->fileExists( $pathLocal ) ) {
 			$attribs['src'] = $webP;

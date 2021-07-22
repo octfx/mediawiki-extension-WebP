@@ -92,15 +92,17 @@ class WebPTransformer {
 	public function transformLikeThumb( MediaTransformOutput $thumb ): Status {
 		$tempFile = $this->getTempFile();
 
-		$out = sprintf(
-			'%s%s/%dpx-%s',
-			$this->file->getHashPath(),
-			$this->file->getName(),
-			$thumb->getWidth(),
-			self::changeExtensionWebp( $this->file->getName() )
+		$out = $this->file->getThumbRel(
+			sprintf(
+				'%dpx-%s',
+				$thumb->getWidth(),
+				self::changeExtensionWebp( $this->file->getName() )
+			)
 		);
 
-		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
+
+		if ( $this->checkFileExists( $out, 'webp-thumb' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
@@ -132,11 +134,9 @@ class WebPTransformer {
 	public function transform(): Status {
 		$tempFile = $this->getTempFile();
 
-		$out = sprintf(
-			'%s/%s',
-			rtrim( $this->file->getHashPath(), '/' ),
-			self::changeExtensionWebp( $this->file->getName() )
-		);
+		$out = self::changeExtensionWebp( $this->file->getRel() );
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
 		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
@@ -322,7 +322,7 @@ class WebPTransformer {
 	 * @return TempFSFile
 	 */
 	private function getTempFile(): TempFSFile {
-		$tempFSFile = MediaWikiServices::getInstance()->getTempFSFileFactory()->newTempFSFile( 'webp', 'webp' );
+		$tempFSFile = MediaWikiServices::getInstance()->getTempFSFileFactory()->newTempFSFile( 'transform_', 'webp' );
 
 		if ( $tempFSFile === null ) {
 			throw new RuntimeException( 'Could not get a new temp file' );
