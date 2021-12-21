@@ -94,6 +94,10 @@ class LocalWebPFileRepo extends LocalRepo {
 	public function fileExists( $file ): bool {
 		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
+		if ( strpos( $file, 'local-temp' ) !== false ) {
+			return parent::fileExists( $file );
+		}
+
 		if ( in_array( $ext, [ 'png', 'jpg', 'jpeg' ], true ) ) {
 			$file = WebPTransformer::changeExtensionWebp( $file );
 		}
