@@ -8,10 +8,8 @@
 	"license-name": "GPL-2.0-or-later",
 	"type": "media",
 	"requires": {
-		"MediaWiki": ">= 1.35.0",
-		"platform":  {
-			"ext-imagick": "*"
-		}
+		"MediaWiki": ">= 1.35.0"
+
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\WebP\\": "includes/"
@@ -19,7 +17,7 @@
 	"config": {
 		"WebPEnableConvertOnUpload": {
 			"description": "Enables WebP creation after a new image was uploaded",
-			"value": true
+			"value": false
 		},
 		"WebPEnableConvertOnTransform": {
 			"description": "Enables WebP creation after a thumbnail was created",

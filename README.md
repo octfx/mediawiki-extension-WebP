@@ -9,6 +9,10 @@ Requires a usable version of imagick and `libwebp` installed.
 
 This extension works best when thumbnail generation through [`thumb.php`](https://www.mediawiki.org/wiki/Manual:Thumb.php) is enabled.
 
+## How does this work?
+The basic idea of this extension is to transparently change out all existing images of a wiki to webp versions without requiring a re-upload.  
+This works by 
+
 ## Converting already uploaded images
 A maintenance script exists to convert already uploaded images:
 ```shell
