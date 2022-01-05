@@ -126,6 +126,9 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 			$webP = str_replace( 'images/', 'images/webp/', $webP );
 		}
 
+		// TODO: Investigate
+		str_replace( '/webp/webp', '/webp', $webP );
+
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Path local is "%s"; WebP Url is "%s"', 'ThumbnailHooks', __FUNCTION__, $pathLocal, $webP ) );
 
 		if ( $this->repoGroup->getLocalRepo()->fileExists( $pathLocal ) ) {
