@@ -78,10 +78,20 @@ class LocalWebPFile extends LocalFile {
 			( $params['physicalHeight'] ?? $params['height'] ?? 0 ) >= $this->getHeight( $params['page'] ?? 1 );
 
 		if ( $greaterThanSource ) {
-			return new ThumbnailImage( $this, $this->getUrl(), null, [
-				'width' => $this->getWidth( $params['page'] ?? 1 ),
-				'height' => $this->getHeight( $params['page'] ?? 1 ),
-			] );
+			if ( isset( $params['width'] ) ) {
+				$params = [
+					'width' => $this->getWidth( $params['page'] ?? 1 )
+				];
+			} elseif ( isset( $params['height'] ) ) {
+				$params = [
+					'height' => $this->getWidth( $params['height'] ?? 1 )
+				];
+			} else {
+				return new ThumbnailImage( $this, $this->getUrl(), null, [
+					'width' => $this->getWidth( $params['page'] ?? 1 ),
+					'height' => $this->getHeight( $params['page'] ?? 1 ),
+				] );
+			}
 		}
 
 		$transformed = parent::transform( $params, $flags );
@@ -211,16 +221,18 @@ class LocalWebPFile extends LocalFile {
 	 *
 	 * @return string
 	 */
-	public function getUrl() {
-		if ( !WebPTransformer::canTransform( $this ) ) {
+	public function getUrl( bool $forceOriginal = false ) {
+		if ( $forceOriginal === true || !WebPTransformer::canTransform( $this ) ) {
 			return parent::getUrl();
 		}
 
 		$ext = $this->getExtension();
 		$url = $this->repo->getZoneUrl( 'webp-public', $ext ) . '/' . $this->getUrlRel();
 
+		$url = WebPTransformer::changeExtensionWebp( $url );
+
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning url "%s" for "%s"', 'LocalWebPFile', __FUNCTION__, $url, $this->getName() ) );
 
-		return WebPTransformer::changeExtensionWebp( $url );
+		return $url;
 	}
 }

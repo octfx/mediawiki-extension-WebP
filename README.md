@@ -73,3 +73,10 @@ $wgWebPEnableConvertOnTransform = true;
 
 ## De-Installation
 Delete the folders `images/webp` and `images/thumbs/webp` and remove the extension.
+
+## Known Issues
+MultiMediaViewer breaks when thumbhandler is disabled and the original sized image is displayed.  
+This is due to Extension:WebP changing the url to the webp version, and MMV using the url to query the api for file info.  
+As the url is containing `.webp` and no file page ending in `.webp` exists on the wiki, MMW will display that this file is missing.
+
+There is currently no workaround other than enabling `thumb.php`. (? Help welcome)
