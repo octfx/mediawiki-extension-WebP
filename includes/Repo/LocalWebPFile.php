@@ -68,16 +68,22 @@ class LocalWebPFile extends LocalFile {
 
 	/**
 	 * Get the transformed image
-	 * TODO: Return link to base webp file, if requested size > base size
 	 *
 	 * @param array $params
 	 * @param int $flags
 	 * @return bool|MediaTransformError|MediaTransformOutput|ThumbnailImage
 	 */
 	public function transform( $params, $flags = 0 ) {
+		$greaterThanSource = ( $params['physicalWidth'] ?? 0 ) >= $this->getWidth( $params['page'] ?? 1 ) ||
+			( $params['physicalHeight'] ?? 0 ) >= $this->getHeight( $params['page'] ?? 1 );
+
+		if ( $greaterThanSource ) {
+			return $this->getUnscaledThumb();
+		}
+
 		$transformed = parent::transform( $params, $flags );
 
-		if ( $transformed === false || !WebPTransformer::canTransform( $this ) || $transformed->getWidth() >= $this->getWidth() ) {
+		if ( $transformed === false || !WebPTransformer::canTransform( $this ) ) {
 			wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning parent transform for "%s"', 'LocalWebPFile', __FUNCTION__, $this->getName() ) );
 
 			return $transformed;
