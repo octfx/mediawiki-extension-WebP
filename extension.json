@@ -6,12 +6,11 @@
 	"url": "https://www.mediawiki.org/wiki/Extension:WebP",
 	"descriptionmsg": "webp-desc",
 	"license-name": "GPL-2.0-or-later",
-	"type": "other",
+	"type": "media",
+	"version": "1.0.0",
 	"requires": {
-		"MediaWiki": ">= 1.35.0",
-		"platform":  {
-			"ext-imagick": "*"
-		}
+		"MediaWiki": ">= 1.35.0"
+
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\WebP\\": "includes/"
@@ -19,7 +18,7 @@
 	"config": {
 		"WebPEnableConvertOnUpload": {
 			"description": "Enables WebP creation after a new image was uploaded",
-			"value": true
+			"value": false
 		},
 		"WebPEnableConvertOnTransform": {
 			"description": "Enables WebP creation after a thumbnail was created",
@@ -35,7 +34,7 @@
 		},
 		"WebPFilterStrength": {
 			"description": "Filter Strength",
-			"value": 50
+			"value": 80
 		},
 		"WebPAutoFilter": {
 			"description": "Enable Auto Filter",
@@ -86,7 +85,7 @@
 		"FileDeleteComplete": "WebPFileHooks",
 		"PageMoveCompleting": "WebPFileHooks",
 		"UploadComplete": "WebPMainHooks",
-		"-ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
+		"ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
 		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"
 	},
 	"MessagesDirs": {

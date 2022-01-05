@@ -98,7 +98,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			return;
 		}
 
-		if ( !in_array( $file->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+		if ( !WebPTransformer::canTransform( $file ) ) {
 			return;
 		}
 

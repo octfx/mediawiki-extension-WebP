@@ -1,5 +1,23 @@
 <?php
 
+/**
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * @file
+ */
+
 declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP;
@@ -18,6 +36,7 @@ use MediaWiki\Shell\Shell;
 use MediaWiki\ShellDisabledError;
 use RuntimeException;
 use Status;
+use TempFSFile;
 
 /**
  * Main class for transforming images into webp files
@@ -49,7 +68,7 @@ class WebPTransformer {
 	public function __construct( File $file, array $options = [] ) {
 		$this->checkImagickInstalled();
 
-		if ( !in_array( $file->getMimeType(), self::$supportedMimes ) ) {
+		if ( !self::canTransform( $file ) ) {
 			throw new RuntimeException(
 				'Mimetype "%s" is not in supported mime: [%s]',
 				$file->getMimeType(),
@@ -71,17 +90,19 @@ class WebPTransformer {
 	 * @throws ImagickException
 	 */
 	public function transformLikeThumb( MediaTransformOutput $thumb ): Status {
-		$tempFile = $this->getTempFilePath();
+		$tempFile = $this->getTempFile();
 
-		$out = sprintf(
-			'%s%s/%dpx-%s',
-			$this->file->getHashPath(),
-			$this->file->getName(),
-			$thumb->getWidth(),
-			self::changeExtensionWebp( $this->file->getName() )
+		$out = $this->file->getThumbRel(
+			sprintf(
+				'%dpx-%s',
+				$thumb->getWidth(),
+				self::changeExtensionWebp( $this->file->getName() )
+			)
 		);
 
-		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
+
+		if ( $this->checkFileExists( $out, 'webp-thumb' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
@@ -95,7 +116,7 @@ class WebPTransformer {
 			$tempFile,
 			'webp-thumb',
 			$out,
-			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
+			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
 
 		$this->logStatus( $status );
@@ -111,15 +132,15 @@ class WebPTransformer {
 	 * @throws ImagickException
 	 */
 	public function transform(): Status {
-		$tempFile = $this->getTempFilePath();
+		$tempFile = $this->getTempFile();
 
-		$out = sprintf(
-			'%s/%s',
-			$this->file->getHashPath(),
-			self::changeExtensionWebp( $this->file->getName() )
-		);
+		$out = self::changeExtensionWebp( $this->file->getRel() );
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
 		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
+			wfDebugLog( 'WebP', sprintf( '[%s::%s] File exists, skipping transform', 'WebPTransformer', __FUNCTION__ ) );
+
 			return Status::newGood();
 		}
 
@@ -128,11 +149,12 @@ class WebPTransformer {
 		if ( !$result ) {
 			return Status::newFatal( 'Could not convert Image' );
 		}
+
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
 			'webp-public',
 			$out,
-			$this->shouldOverwrite() ? FileRepo::OVERWRITE : 0
+			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
 
 		$this->logStatus( $status );
@@ -156,6 +178,14 @@ class WebPTransformer {
 	}
 
 	/**
+	 * @param File $file
+	 * @return bool
+	 */
+	public static function canTransform( File $file ): bool {
+		return in_array( $file->getMimeType(), self::$supportedMimes );
+	}
+
+	/**
 	 * Check if Imagick is installed
 	 *
 	 * @throws RuntimeException
@@ -176,14 +206,17 @@ class WebPTransformer {
 	}
 
 	/**
-	 * @param string $sourcePath
-	 * @param string $outPath
+	 * @param TempFSFile|string $outPath
 	 * @param int $width
 	 *
 	 * @return bool
 	 * @throws ImagickException
 	 */
-	private function transformImage( string $outPath, int $width = -1 ): bool {
+	private function transformImage( $outPath, int $width = -1 ): bool {
+		if ( $outPath instanceof TempFSFile ) {
+			$outPath = $outPath->getPath();
+		}
+
 		$cwebpResult = $this->transformCwebp( $outPath, $width );
 
 		if ( !$cwebpResult ) {
@@ -194,7 +227,6 @@ class WebPTransformer {
 	}
 
 	/**
-	 * @param string $sourcePath
 	 * @param string $outPath
 	 * @param int $width
 	 *
@@ -204,6 +236,8 @@ class WebPTransformer {
 		if ( Shell::isDisabled() ) {
 			return false;
 		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting cwebp transform.', 'WebPTransformer', __FUNCTION__ ) );
 
 		$command = MediaWikiServices::getInstance()->getShellCommandFactory()->create();
 
@@ -219,6 +253,8 @@ class WebPTransformer {
 				'-quiet',
 				$resize,
 				sprintf( '-q %d', $this->getConfigValue( 'WebPCompressionQuality' ) ),
+				sprintf( '-alpha_q %d', $this->getConfigValue( 'WebPFilterStrength' ) ),
+				$this->getConfigValue( 'WebPAutoFilter' ) ? '-af' : '',
 				$this->file->getLocalRefPath(),
 				sprintf( '-o %s', $outPath ),
 			]
@@ -232,6 +268,8 @@ class WebPTransformer {
 			return false;
 		}
 
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $result->getExitCode() ) );
+
 		return $result->getExitCode() === 0;
 	}
 
@@ -239,7 +277,8 @@ class WebPTransformer {
 	 * Prepare to transform the image
 	 * Options are configurable
 	 *
-	 * @param string $sourcePath Path to source image
+	 * @param string $outPath
+	 * @param int $width
 	 *
 	 * @return bool
 	 * @throws ImagickException
@@ -286,18 +325,18 @@ class WebPTransformer {
 	}
 
 	/**
-	 * Get a temp file path for storing transformations
+	 * Get a temp file for storing transformations
 	 *
-	 * @return string
+	 * @return TempFSFile
 	 */
-	private function getTempFilePath(): string {
-		$tempFSFile = MediaWikiServices::getInstance()->getTempFSFileFactory()->newTempFSFile( 'webp', 'webp' );
+	private function getTempFile(): TempFSFile {
+		$tempFSFile = MediaWikiServices::getInstance()->getTempFSFileFactory()->newTempFSFile( 'transform_', 'webp' );
 
 		if ( $tempFSFile === null ) {
 			throw new RuntimeException( 'Could not get a new temp file' );
 		}
 
-		return $tempFSFile->getPath();
+		return $tempFSFile;
 	}
 
 	/**

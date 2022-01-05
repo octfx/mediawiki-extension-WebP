@@ -48,10 +48,16 @@ class MainHooks implements UploadCompleteHook {
 		$this->mainConfig = $mainConfig;
 	}
 
-	public static function setup() {
-		global $wgLocalFileRepo;
+	/**
+	 * Registers the extension as a local file repo
+	 */
+	public static function setup(): void {
+		global $wgLocalFileRepo, $wgGenerateThumbnailOnParse;
 
 		$wgLocalFileRepo['class'] = LocalWebPFileRepo::class;
+		$wgLocalFileRepo['name'] = 'local';
+		$wgLocalFileRepo['transformVia404'] = !$wgGenerateThumbnailOnParse;
+		$wgLocalFileRepo['backend'] = $wgLocalFileRepo['name'] . '-backend';
 	}
 
 	/**
@@ -68,7 +74,7 @@ class MainHooks implements UploadCompleteHook {
 			return;
 		}
 
-		if ( $uploadBase->getLocalFile() === null || !in_array( $uploadBase->getLocalFile()->getMimeType(), WebPTransformer::$supportedMimes ) ) {
+		if ( $uploadBase->getLocalFile() === null || !WebPTransformer::canTransform( $uploadBase->getLocalFile() ) ) {
 			return;
 		}
 
