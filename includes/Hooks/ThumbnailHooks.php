@@ -120,6 +120,9 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 
 		$pathLocal = str_replace( [ 'local-public', 'local-thumb' ], [ 'local-public/webp', 'local-thumb/webp' ], $pathLocal );
 
+		// TODO: Investigate
+		$pathLocal = str_replace( '/webp/webp', '/webp', $pathLocal );
+
 		if ( strpos( $webP, 'thumb/' ) !== false ) {
 			$webP = str_replace( 'thumb/', 'thumb/webp/', $webP );
 		} else {
@@ -127,7 +130,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 		}
 
 		// TODO: Investigate
-		str_replace( '/webp/webp', '/webp', $webP );
+		$webP = str_replace( '/webp/webp', '/webp', $webP );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Path local is "%s"; WebP Url is "%s"', 'ThumbnailHooks', __FUNCTION__, $pathLocal, $webP ) );
 
