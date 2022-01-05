@@ -74,11 +74,14 @@ class LocalWebPFile extends LocalFile {
 	 * @return bool|MediaTransformError|MediaTransformOutput|ThumbnailImage
 	 */
 	public function transform( $params, $flags = 0 ) {
-		$greaterThanSource = ( $params['physicalWidth'] ?? 0 ) >= $this->getWidth( $params['page'] ?? 1 ) ||
-			( $params['physicalHeight'] ?? 0 ) >= $this->getHeight( $params['page'] ?? 1 );
+		$greaterThanSource = ( $params['physicalWidth'] ?? $params['width'] ?? 0 ) >= $this->getWidth( $params['page'] ?? 1 ) ||
+			( $params['physicalHeight'] ?? $params['height'] ?? 0 ) >= $this->getHeight( $params['page'] ?? 1 );
 
 		if ( $greaterThanSource ) {
-			return $this->getUnscaledThumb();
+			return new ThumbnailImage( $this, $this->getUrl(), null, [
+				'width' => $this->getWidth( $params['page'] ?? 1 ),
+				'height' => $this->getHeight( $params['page'] ?? 1 ),
+			] );
 		}
 
 		$transformed = parent::transform( $params, $flags );
@@ -203,4 +206,21 @@ class LocalWebPFile extends LocalFile {
 		return $path;
 	}
 
+	/**
+	 * Returns the url to the local webp source
+	 *
+	 * @return string
+	 */
+	public function getUrl() {
+		if ( !WebPTransformer::canTransform( $this ) ) {
+			return parent::getUrl();
+		}
+
+		$ext = $this->getExtension();
+		$url = $this->repo->getZoneUrl( 'webp-public', $ext ) . '/' . $this->getUrlRel();
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning url "%s" for "%s"', 'LocalWebPFile', __FUNCTION__, $url, $this->getName() ) );
+
+		return WebPTransformer::changeExtensionWebp( $url );
+	}
 }
