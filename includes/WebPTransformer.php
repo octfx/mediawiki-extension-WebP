@@ -253,6 +253,8 @@ class WebPTransformer {
 				'-quiet',
 				$resize,
 				sprintf( '-q %d', $this->getConfigValue( 'WebPCompressionQuality' ) ),
+				sprintf( '-alpha_q %d', $this->getConfigValue( 'WebPFilterStrength' ) ),
+				$this->getConfigValue( 'WebPAutoFilter' ) ? '-af' : '',
 				$this->file->getLocalRefPath(),
 				sprintf( '-o %s', $outPath ),
 			]
