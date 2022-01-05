@@ -84,7 +84,7 @@ class LocalWebPFile extends LocalFile {
 				];
 			} elseif ( isset( $params['height'] ) ) {
 				$params = [
-					'height' => $this->getHeight( $params['height'] ?? 1 )
+					'height' => $this->getHeight( $params['page'] ?? 1 )
 				];
 			} else {
 				return new ThumbnailImage( $this, $this->getUrl(), null, [
