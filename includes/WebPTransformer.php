@@ -139,6 +139,8 @@ class WebPTransformer {
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
 		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
+			wfDebugLog( 'WebP', sprintf( '[%s::%s] File exists, skipping transform', 'WebPTransformer', __FUNCTION__ ) );
+
 			return Status::newGood();
 		}
 
@@ -235,6 +237,8 @@ class WebPTransformer {
 			return false;
 		}
 
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting cwebp transform.', 'WebPTransformer', __FUNCTION__ ) );
+
 		$command = MediaWikiServices::getInstance()->getShellCommandFactory()->create();
 
 		$resize = '';
@@ -261,6 +265,8 @@ class WebPTransformer {
 
 			return false;
 		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $result->getExitCode() ) );
 
 		return $result->getExitCode() === 0;
 	}

@@ -34,6 +34,8 @@ class WebPMediaHandler extends WebPHandler {
 	 * @return bool
 	 */
 	protected function transformImageMagick( $image, $params ) {
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transforming image %s', 'WebPMediaHandler', __FUNCTION__, $image->getHashPath() ) );
+
 		$dimensions = new FakeMediaTransformOutput(
 			$params['physicalWidth'] ?? $image->getWidth(),
 			$params['physicalHeight'] ?? $image->getHeight()
