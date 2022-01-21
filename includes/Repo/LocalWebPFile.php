@@ -78,20 +78,7 @@ class LocalWebPFile extends LocalFile {
 			( $params['physicalHeight'] ?? $params['height'] ?? 0 ) > $this->getHeight( $params['page'] ?? 1 );
 
 		if ( $greaterThanSource && WebPTransformer::canTransform( $this ) ) {
-			if ( isset( $params['width'] ) ) {
-				$params = [
-					'width' => $this->getWidth( $params['page'] ?? 1 )
-				];
-			} elseif ( isset( $params['height'] ) ) {
-				$params = [
-					'height' => $this->getHeight( $params['page'] ?? 1 )
-				];
-			} else {
-				return new ThumbnailImage( $this, $this->getUrl(), null, [
-					'width' => $this->getWidth( $params['page'] ?? 1 ),
-					'height' => $this->getHeight( $params['page'] ?? 1 ),
-				] );
-			}
+			return new ThumbnailImage( $this, $this->getUrl(), null, $params );
 		}
 
 		$transformed = parent::transform( $params, $flags );
