@@ -74,6 +74,19 @@ class LocalWebPFile extends LocalFile {
 	 * @return bool|MediaTransformError|MediaTransformOutput|ThumbnailImage
 	 */
 	public function transform( $params, $flags = 0 ) {
+		$handler = $this->getHandler();
+		$handler->normaliseParams( $this, $params );
+
+		$greaterThanSource = ( $params['physicalWidth'] ?? $params['width'] ?? 0 ) > $this->getWidth( $params['page'] ?? 1 ) ||
+			( $params['physicalHeight'] ?? $params['height'] ?? 0 ) > $this->getHeight( $params['page'] ?? 1 );
+
+		if ( $greaterThanSource && WebPTransformer::canTransform( $this ) ) {
+			return new ThumbnailImage( $this, $this->getUrl(), null, [
+				'width' => $params['clientWidth'],
+				'height' => $params['clientHeight']
+			] );
+		}
+
 		$greaterThanSource = ( $params['physicalWidth'] ?? $params['width'] ?? 0 ) > $this->getWidth( $params['page'] ?? 1 ) ||
 			( $params['physicalHeight'] ?? $params['height'] ?? 0 ) > $this->getHeight( $params['page'] ?? 1 );
 
@@ -209,6 +222,7 @@ class LocalWebPFile extends LocalFile {
 	 * @return string
 	 */
 	public function getUrl( bool $forceOriginal = false ) {
+		// TODO: Check if webp file exists
 		if ( $forceOriginal === true || !WebPTransformer::canTransform( $this ) ) {
 			return parent::getUrl();
 		}
