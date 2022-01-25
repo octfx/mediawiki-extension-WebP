@@ -75,13 +75,14 @@ class LocalWebPFile extends LocalFile {
 	 */
 	public function transform( $params, $flags = 0 ) {
 		$handler = $this->getHandler();
-		$handler->normaliseParams( $this, $params );
+		$continue = $handler->normaliseParams( $this, $params );
 
 		$greaterThanSource = ( $params['physicalWidth'] ?? $params['width'] ?? 0 ) > $this->getWidth( $params['page'] ?? 1 ) ||
 			( $params['physicalHeight'] ?? $params['height'] ?? 0 ) > $this->getHeight( $params['page'] ?? 1 );
 
-		if ( $greaterThanSource && WebPTransformer::canTransform( $this ) ) {
-			return new ThumbnailImage( $this, $this->getUrl(), null, [
+		if ( !$continue || ( $greaterThanSource && WebPTransformer::canTransform( $this ) ) ) {
+			// Return the original file url if continue is false (which means that the transform should fail)
+			return new ThumbnailImage( $this, $this->getUrl( !$continue ), null, [
 				'width' => $params['clientWidth'],
 				'height' => $params['clientHeight']
 			] );
