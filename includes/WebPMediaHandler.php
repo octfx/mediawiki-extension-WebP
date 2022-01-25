@@ -23,6 +23,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\WebP;
 
 use File;
+use ImagickException;
 use MediaTransformError;
 use WebPHandler;
 
@@ -31,7 +32,7 @@ class WebPMediaHandler extends WebPHandler {
 	/**
 	 * @param File $image
 	 * @param array $params
-	 * @return bool
+	 * @return MediaTransformError|bool
 	 */
 	protected function transformImageMagick( $image, $params ) {
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transforming image %s', 'WebPMediaHandler', __FUNCTION__, $image->getHashPath() ) );
@@ -46,8 +47,17 @@ class WebPMediaHandler extends WebPHandler {
 		}
 
 		$transformer = new WebPTransformer( $image );
+		try {
+			$result = $transformer->transformLikeThumb( $dimensions );
+		} catch ( ImagickException $e ) {
+			return $this->getMediaTransformError( $params, $e->getMessage() );
+		}
 
-		return !$transformer->transformLikeThumb( $dimensions )->isOK();
+		if ( !$result->isOK() ) {
+			$this->getMediaTransformError( $params, $result->getMessage()->text() );
+		}
+
+		return false;
 	}
 
 	/**
