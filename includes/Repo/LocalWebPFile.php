@@ -75,30 +75,32 @@ class LocalWebPFile extends LocalFile {
 	 */
 	public function transform( $params, $flags = 0 ) {
 		$handler = $this->getHandler();
-		$continue = $handler->normaliseParams( $this, $params );
+		$normalized = $params;
+		$continue = $handler->normaliseParams( $this, $normalized );
 
-		$greaterThanSource = ( $params['physicalWidth'] ?? $params['width'] ?? 0 ) > $this->getWidth( $params['page'] ?? 1 ) ||
-			( $params['physicalHeight'] ?? $params['height'] ?? 0 ) > $this->getHeight( $params['page'] ?? 1 );
+		$greaterThanSource = ( $normalized['physicalWidth'] ?? $normalized['width'] ?? 0 ) > $this->getWidth( $normalized['page'] ?? 1 ) ||
+			( $normalized['physicalHeight'] ?? $normalized['height'] ?? 0 ) > $this->getHeight( $normalized['page'] ?? 1 );
 
 		if ( !$continue || ( $greaterThanSource && WebPTransformer::canTransform( $this ) ) ) {
-			// Return the original file url if continue is false (which means that the transform should fail)
+			wfDebugLog(
+				'WebP',
+				sprintf( '[%s::%s] Returning client scaling image for "%s"', 'LocalWebPFile', __FUNCTION__, $this->getName() )
+			);
+
+			// Return the original file url if continue is false (which indicates that the transform should fail)
 			return new ThumbnailImage( $this, $this->getUrl( !$continue ), null, [
-				'width' => $params['clientWidth'],
-				'height' => $params['clientHeight']
+				'width' => $normalized['clientWidth'],
+				'height' => $normalized['clientHeight']
 			] );
-		}
-
-		$greaterThanSource = ( $params['physicalWidth'] ?? $params['width'] ?? 0 ) > $this->getWidth( $params['page'] ?? 1 ) ||
-			( $params['physicalHeight'] ?? $params['height'] ?? 0 ) > $this->getHeight( $params['page'] ?? 1 );
-
-		if ( $greaterThanSource && WebPTransformer::canTransform( $this ) ) {
-			return new ThumbnailImage( $this, $this->getUrl(), null, $params );
 		}
 
 		$transformed = parent::transform( $params, $flags );
 
 		if ( $transformed === false || !WebPTransformer::canTransform( $this ) ) {
-			wfDebugLog( 'WebP', sprintf( '[%s::%s] Returning parent transform for "%s"', 'LocalWebPFile', __FUNCTION__, $this->getName() ) );
+			wfDebugLog(
+				'WebP',
+				sprintf( '[%s::%s] Returning parent transform for "%s"', 'LocalWebPFile', __FUNCTION__, $this->getName() )
+			);
 
 			return $transformed;
 		}
