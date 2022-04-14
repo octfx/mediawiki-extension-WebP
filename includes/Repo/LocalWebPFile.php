@@ -75,6 +75,11 @@ class LocalWebPFile extends LocalFile {
 	 */
 	public function transform( $params, $flags = 0 ) {
 		$handler = $this->getHandler();
+
+		if ( is_bool( $handler ) ) {
+			return $handler;
+		}
+
 		$normalized = $params;
 		$continue = $handler->normaliseParams( $this, $normalized );
 
