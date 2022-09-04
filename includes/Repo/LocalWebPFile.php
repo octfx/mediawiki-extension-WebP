@@ -99,7 +99,7 @@ class LocalWebPFile extends LocalFile {
 			] );
 		}
 
-		$transformed = parent::transform( $params, $flags );
+		$transformed = parent::transform( $normalized, $flags );
 
 		if ( $transformed === false || !WebPTransformer::canTransform( $this ) ) {
 			wfDebugLog(
@@ -110,12 +110,14 @@ class LocalWebPFile extends LocalFile {
 			return $transformed;
 		}
 
-		$thumbName = $this->thumbName( $params );
+		$thumbName = $this->thumbName( $normalized );
 
-		$url = $this->getThumbUrl( $thumbName );
+		$url = $this->getThumbUrl( $normalized );
 		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'ThumbnailScriptPath' ) !== false ) {
 			$url = $transformed->getUrl();
 		}
+
+		$path = $this->getThumbPath( $this->thumbName( $normalized ) )
 
 		wfDebugLog(
 			'WebP',
@@ -123,11 +125,11 @@ class LocalWebPFile extends LocalFile {
 			'all',
 			[
 				'url' => $url,
-				'path' => $this->getThumbPath( $this->thumbName( $params ) ),
+				'path' => $path,
 			]
 		);
 
-		return new ThumbnailImage( $this, $url, $this->getThumbPath( $this->thumbName( $params ) ), [
+		return new ThumbnailImage( $this, $url, $path, [
 			'width' => $transformed->getWidth(),
 			'height' => $transformed->getHeight(),
 		] );
