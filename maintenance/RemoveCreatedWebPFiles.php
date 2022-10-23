@@ -9,7 +9,7 @@ if ( $IP === false ) {
 }
 require_once "$IP/maintenance/Maintenance.php";
 
-class CleanImages extends Maintenance {
+class RemoveCreatedWebPFiles extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 
@@ -75,5 +75,5 @@ class CleanImages extends Maintenance {
 	}
 }
 
-$maintClass = CleanImages::class;
+$maintClass = RemoveCreatedWebPFiles::class;
 require_once RUN_MAINTENANCE_IF_MAIN;

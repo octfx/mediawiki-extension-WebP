@@ -11,7 +11,7 @@ if ( $IP === false ) {
 }
 require_once "$IP/maintenance/Maintenance.php";
 
-class ConvertImages extends Maintenance {
+class CreateWebPFilesFromLocalFiles extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 
@@ -90,7 +90,13 @@ class ConvertImages extends Maintenance {
 		}
 
 		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
-			JobQueueGroup::singleton()->push( $jobs );
+			if ( method_exists( MediaWikiServices::class, 'getJobQueueGroupFactory' ) ) {
+				$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
+			} else {
+				$group = JobQueueGroup::singleton();
+			}
+
+			$group->push( $jobs );
 		} else {
 			foreach ( $jobs as $job ) {
 				$result = MediaWikiServices::getInstance()->getJobRunner()->executeJob( $job );
@@ -132,5 +138,5 @@ class ConvertImages extends Maintenance {
 	}
 }
 
-$maintClass = ConvertImages::class;
+$maintClass = CreateWebPFilesFromLocalFiles::class;
 require_once RUN_MAINTENANCE_IF_MAIN;
