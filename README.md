@@ -1,5 +1,5 @@
 # WebP Extension
-While this has been in active use on star-citizen.wiki for over a year, I still deem this somewhat experimental.
+While this has been in active use on star-citizen.wiki for over a year, I still deem this somewhat experimental, as many edge-cases (may) remain.
 
 Upon file upload this extension creates a WebP version of the uploaded image.
 
@@ -7,7 +7,8 @@ If an WebP file exists, and the browser supports WebP images, the link for the c
 
 Requires a usable version of `imagick` and `libwebp` installed.
 
-This extension works best when thumbnail generation through [`thumb.php`](https://www.mediawiki.org/wiki/Manual:Thumb.php) is enabled.
+This extension works best when thumbnail generation through [`thumb.php`](https://www.mediawiki.org/wiki/Manual:Thumb.php) is enabled.  
+Normal use without `thumb.php` works as well, but will break MMV. 
 
 ## How does this work?
 The basic idea of this extension is to transparently change out all existing images of a wiki to webp versions without requiring a re-upload.  
@@ -79,4 +80,20 @@ MultiMediaViewer breaks when thumbhandler is disabled and the original sized ima
 This is due to Extension:WebP changing the url to the webp version, and MMV using the url to query the api for file info.  
 As the url is containing `.webp` and no file page ending in `.webp` exists on the wiki, MMW will display that this file is missing.
 
-There is currently no workaround other than enabling `thumb.php`. (? Help welcome)
+There is currently no workaround other than enabling `thumb.php`. (? Help is welcome)
+
+## Current state
+Tested on a fresh local installation of MW 1.39.0-rc.1, in WSL, using PHP 7.4.30 and NGINX, installed as specified in this Readme.  
+Files were uploaded using the standard MW upload form, i.e., Special:Upload.  
+Test were conducted with and without thumbhandler active.  
+
+| Tested                             | Works  | Notes                                             |
+|------------------------------------|--------|---------------------------------------------------|
+| Upload of jpg and png files        | Yes    | WebP Thumbs are created                           |
+| Upload of unsupported files        | Yes    | Files are shown normally                          |
+| Automated creation of thumbnails   | Yes    |                                                   |
+| File moving                        | Yes    | Empty folder may remain                           |
+| File deletion                      | Mostly | One file errored out, but not reproducible        |
+| Uploading of new file versions     | Yes    | Local tests worked                                |
+| Maintenance scripts: Create Images | Mostly | Job complains that files exist, files are created |
+| Maintenance scripts: Remove Images | Yes    | Empty folders remain                              |
