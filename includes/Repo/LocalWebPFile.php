@@ -29,10 +29,17 @@ use MediaTransformOutput;
 use MediaWiki\Extension\WebP\WebPMediaHandler;
 use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\User\UserIdentity;
 use MWException;
 use ThumbnailImage;
 
 class LocalWebPFile extends LocalFile {
+	/**
+	 * A nasty hack to short-circuit to the parent if file is in delete mode
+	 *
+	 * @var bool
+	 */
+	public static $deleteCalled = false;
 
 	/**
 	 * Returns the correct media handler if the current file can be transformed to WebP
@@ -40,7 +47,7 @@ class LocalWebPFile extends LocalFile {
 	 * @return bool|MediaHandler
 	 */
 	public function getHandler() {
-		if ( !WebPTransformer::canTransform( $this ) ) {
+		if ( self::$deleteCalled || !WebPTransformer::canTransform( $this ) ) {
 			return parent::getHandler();
 		}
 
@@ -59,11 +66,20 @@ class LocalWebPFile extends LocalFile {
 	 * @return string
 	 */
 	public function getExtension() {
-		if ( !WebPTransformer::canTransform( $this ) ) {
+		if ( self::$deleteCalled || !WebPTransformer::canTransform( $this ) ) {
 			return parent::getExtension();
 		}
 
 		return 'webp';
+	}
+
+    /**
+     * Nasty way of setting a flag if a file is to be deleted
+     * @inheritDoc
+     */
+	public function deleteFile( $reason, UserIdentity $user, $suppress = false ) {
+		self::$deleteCalled = true;
+		return parent::deleteFile( $reason, $user, $suppress );
 	}
 
 	/**
@@ -112,12 +128,12 @@ class LocalWebPFile extends LocalFile {
 
 		$thumbName = $this->thumbName( $normalized );
 
-		$url = $this->getThumbUrl( $normalized );
+		$url = $this->getThumbUrl( $thumbName );
 		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'ThumbnailScriptPath' ) !== false ) {
 			$url = $transformed->getUrl();
 		}
 
-		$path = $this->getThumbPath( $this->thumbName( $normalized ) )
+		$path = $this->getThumbPath( $this->thumbName( $normalized ) );
 
 		wfDebugLog(
 			'WebP',
@@ -163,7 +179,7 @@ class LocalWebPFile extends LocalFile {
 	 * @throws MWException
 	 */
 	public function getPath() {
-		if ( !WebPTransformer::canTransform( $this ) ) {
+		if ( self::$deleteCalled || !WebPTransformer::canTransform( $this ) ) {
 			return parent::getPath();
 		}
 
@@ -184,7 +200,7 @@ class LocalWebPFile extends LocalFile {
 	/**
 	 * Returns the url to the thumb
 	 *
-	 * @param false $suffix Thumb size
+	 * @param string|false $suffix Thumb size
 	 * @return string
 	 */
 	public function getThumbUrl( $suffix = false ) {
@@ -195,6 +211,9 @@ class LocalWebPFile extends LocalFile {
 		$ext = $this->getExtension();
 		$url = $this->repo->getZoneUrl( 'webp-thumb', $ext ) . '/' . $this->getUrlRel();
 
+		if ( is_array( $suffix ) ) {
+			dd( $suffix );
+		}
 		if ( $suffix !== false ) {
 			$url .= '/' . rawurlencode( WebPTransformer::changeExtensionWebp( $suffix ) );
 		}
@@ -233,7 +252,7 @@ class LocalWebPFile extends LocalFile {
 	 */
 	public function getUrl( bool $forceOriginal = false ) {
 		// TODO: Check if webp file exists
-		if ( $forceOriginal === true || !WebPTransformer::canTransform( $this ) ) {
+		if ( self::$deleteCalled || $forceOriginal === true || !WebPTransformer::canTransform( $this ) ) {
 			return parent::getUrl();
 		}
 

@@ -42,6 +42,10 @@ class LocalWebPFileRepo extends LocalRepo {
 	 * @return string|null Returns null if the zone is not defined
 	 */
 	public function getZonePath( $zone ) {
+		if ( LocalWebPFile::$deleteCalled ) {
+			return parent::getZonePath( $zone );
+		}
+
 		if ( strpos( $zone, 'webp-' ) === false ) {
 			return parent::getZonePath( $zone );
 		}
@@ -76,6 +80,9 @@ class LocalWebPFileRepo extends LocalRepo {
 	 * @inheritDoc
 	 */
 	public function getZoneUrl( $zone, $ext = null ) {
+		if ( LocalWebPFile::$deleteCalled ) {
+			return parent::getZoneUrl( $zone, $ext );
+		}
 		$url = parent::getZoneUrl( str_replace( 'webp-', '', $zone ), $ext );
 
 		if ( strpos( $zone, 'webp-' ) !== false ) {
@@ -91,7 +98,11 @@ class LocalWebPFileRepo extends LocalRepo {
 	 * @param string $file
 	 * @return bool
 	 */
-	public function fileExists( $file ): bool {
+	public function fileExists( $file ): ?bool {
+		if ( LocalWebPFile::$deleteCalled ) {
+			return parent::fileExists( $file );
+		}
+
 		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
 		if ( strpos( $file, 'local-temp' ) !== false ) {
@@ -114,6 +125,10 @@ class LocalWebPFileRepo extends LocalRepo {
 	 * @return FSFile|null
 	 */
 	public function getLocalReference( $virtualUrl ) {
+		if ( LocalWebPFile::$deleteCalled ) {
+			return parent::getLocalReference( $virtualUrl );
+		}
+
 		if ( strpos( $virtualUrl, '/webp' ) !== false ) {
 			$referenceWebP = parent::getLocalReference( WebPTransformer::changeExtensionWebp( $virtualUrl ) );
 

@@ -107,7 +107,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 
 		$path = $thumbnail->getStoragePath();
 
-		if ( $path === false ) {
+		if ( !is_string( $path ) ) {
 			$path = $thumbnail->getFile()->getPath();
 		}
 
