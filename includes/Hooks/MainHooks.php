@@ -30,6 +30,7 @@ use MediaWiki\Extension\WebP\Repo\LocalWebPFileRepo;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\UploadCompleteHook;
+use MediaWiki\MediaWikiServices;
 use RuntimeException;
 use UploadBase;
 
@@ -86,7 +87,13 @@ class MainHooks implements UploadCompleteHook {
 
 		try {
 			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-				JobQueueGroup::singleton()->push(
+				if ( method_exists( MediaWikiServices::class, 'getJobQueueGroupFactory' ) ) {
+					$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
+				} else {
+					$group = JobQueueGroup::singleton();
+				}
+
+				$group->push(
 					new TransformWebPImageJob(
 						$uploadBase->getTitle(),
 						[
