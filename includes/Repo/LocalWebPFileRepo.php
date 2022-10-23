@@ -142,20 +142,20 @@ class LocalWebPFileRepo extends LocalRepo {
 		return parent::getLocalReference( str_replace( '/webp', '', $virtualUrl ) );
 	}
 
-    /**
-     * Overwrite content type header if thumb is webp
-     *
-     * @inheritDoc
-     */
-    public function streamFileWithStatus( $virtualUrl, $headers = [], $optHeaders = [] ) {
-        if ( pathinfo( $virtualUrl, PATHINFO_EXTENSION ) === 'webp' ) {
-            // Overriding header only works if specified both ways (??)
-            $headers += [
-                'Content-Type=image/webp',
-                'Content-Type:image/webp',
-            ];
-        }
+	/**
+	 * Overwrite content type header if thumb is webp
+	 *
+	 * @inheritDoc
+	 */
+	public function streamFileWithStatus( $virtualUrl, $headers = [], $optHeaders = [] ) {
+		if ( pathinfo( $virtualUrl, PATHINFO_EXTENSION ) === 'webp' ) {
+			// Overriding header only works if specified both ways (??)
+			$headers += [
+				'Content-Type=image/webp',
+				'Content-Type:image/webp',
+			];
+		}
 
-        return parent::streamFileWithStatus( $virtualUrl, $headers, $optHeaders );
-    }
+		return parent::streamFileWithStatus( $virtualUrl, $headers, $optHeaders );
+	}
 }

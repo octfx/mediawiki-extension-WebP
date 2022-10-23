@@ -73,10 +73,10 @@ class LocalWebPFile extends LocalFile {
 		return 'webp';
 	}
 
-    /**
-     * Nasty way of setting a flag if a file is to be deleted
-     * @inheritDoc
-     */
+	/**
+	 * Nasty way of setting a flag if a file is to be deleted
+	 * @inheritDoc
+	 */
 	public function deleteFile( $reason, UserIdentity $user, $suppress = false ) {
 		self::$deleteCalled = true;
 		return parent::deleteFile( $reason, $user, $suppress );
@@ -90,6 +90,15 @@ class LocalWebPFile extends LocalFile {
 	 * @return bool|MediaTransformError|MediaTransformOutput|ThumbnailImage
 	 */
 	public function transform( $params, $flags = 0 ) {
+		if ( !WebPTransformer::canTransform( $this ) ) {
+			wfDebugLog(
+				'WebP',
+				sprintf( '[%s::%s] Returning parent transform for "%s"', 'LocalWebPFile', __FUNCTION__, $this->getName() )
+			);
+
+			return parent::transform( $params, $flags );
+		}
+
 		$handler = $this->getHandler();
 
 		if ( is_bool( $handler ) ) {
@@ -117,13 +126,8 @@ class LocalWebPFile extends LocalFile {
 
 		$transformed = parent::transform( $normalized, $flags );
 
-		if ( $transformed === false || !WebPTransformer::canTransform( $this ) ) {
-			wfDebugLog(
-				'WebP',
-				sprintf( '[%s::%s] Returning parent transform for "%s"', 'LocalWebPFile', __FUNCTION__, $this->getName() )
-			);
-
-			return $transformed;
+		if ( $transformed === false ) {
+			return false;
 		}
 
 		$thumbName = $this->thumbName( $normalized );
