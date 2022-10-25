@@ -19,29 +19,29 @@ It works best when the thumb handler is active, as this will enable rendering we
 ## Converting already uploaded images
 A maintenance script exists to convert already uploaded images:
 ```shell
-php extensions/WebP/maintenance/ConvertImages.php
+php extensions/WebP/maintenance/CreateWebPFilesFromLocalFiles.php
 
 # To only convert non-thumbnails run
-php extensions/WebP/maintenance/ConvertImages.php --no-thumbs
+php extensions/WebP/maintenance/CreateWebPFilesFromLocalFiles.php --no-thumbs
 
 # To create thumbnails of custom sizes run
 # This will create two thumbnails with size 1000px and 1250px
-php extensions/WebP/maintenance/ConvertImages.php --thumb-sizes=1000,1250
+php extensions/WebP/maintenance/CreateWebPFilesFromLocalFiles.php --thumb-sizes=1000,1250
 
 # To only work on some images run
-php extensions/WebP/maintenance/ConvertImages.php --titles=ImageA.jpg,ImageB.png
+php extensions/WebP/maintenance/CreateWebPFilesFromLocalFiles.php --titles=ImageA.jpg,ImageB.png
 
 # To force the creation of already existing images run
-php extensions/WebP/maintenance/ConvertImages.php --overwrite
+php extensions/WebP/maintenance/CreateWebPFilesFromLocalFiles.php --overwrite
 
 # Only work on page titles matching a prefix
 # Every page starting with prefix 'Example' will be selected
-php extensions/WebP/maintenance/ConvertImages.php --title-prefix=Example
+php extensions/WebP/maintenance/CreateWebPFilesFromLocalFiles.php --title-prefix=Example
 
 # Only work on page titles matching a file-type
 # Every page starting with file-type 'png' will be selected
 # Can be combined with 'title-prefix'
-php extensions/WebP/maintenance/ConvertImages.php --file-type=png
+php extensions/WebP/maintenance/CreateWebPFilesFromLocalFiles.php --file-type=png
 ```
 
 ## Installation
