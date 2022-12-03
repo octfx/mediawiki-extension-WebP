@@ -29,5 +29,10 @@
 	},
 	"extra": {
 		"installer-name": "WebP"
+	},
+	"config": {
+		"allow-plugins": {
+			"composer/installers": true
+		}
 	}
 }

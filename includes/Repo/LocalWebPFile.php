@@ -256,7 +256,11 @@ class LocalWebPFile extends LocalFile {
 	 */
 	public function getUrl( bool $forceOriginal = false ) {
 		// TODO: Check if webp file exists
-		if ( self::$deleteCalled || $forceOriginal === true || !WebPTransformer::canTransform( $this ) ) {
+		if ( self::$deleteCalled ||
+			$forceOriginal === true ||
+			!WebPTransformer::canTransform( $this ) ||
+			!$this->getTitle()->isContentPage()
+		) {
 			return parent::getUrl();
 		}
 
