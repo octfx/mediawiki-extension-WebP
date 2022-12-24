@@ -5,7 +5,7 @@ Upon file upload this extension creates a WebP version of the uploaded image.
 
 If an WebP file exists, and the browser supports WebP images, the link for the current image is changed for the webp version.
 
-Requires a usable version of `imagick` and `libwebp` installed.
+Requires a usable version of `imagick`, `libwebp (cwebp)`, or `gd` installed.
 
 This extension works best when thumbnail generation through [`thumb.php`](https://www.mediawiki.org/wiki/Manual:Thumb.php) is enabled.  
 Normal use without `thumb.php` works as well, but will break MMV. 
@@ -94,6 +94,6 @@ Test were conducted with and without thumbhandler active.
 | Automated creation of thumbnails   | Yes    |                                                   |
 | File moving                        | Yes    | Empty folder may remain                           |
 | File deletion                      | Mostly | One file errored out, but not reproducible        |
-| Uploading of new file versions     | Yes    | Local tests worked                                |
+| !! Uploading of new file versions  | ?      | Local tests worked, Reports say otherwise         |
 | Maintenance scripts: Create Images | Mostly | Job complains that files exist, files are created |
 | Maintenance scripts: Remove Images | Yes    | Empty folders remain                              |

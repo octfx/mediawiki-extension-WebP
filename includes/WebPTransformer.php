@@ -191,8 +191,8 @@ class WebPTransformer {
 	 * @throws RuntimeException
 	 */
 	private function checkImagickInstalled(): void {
-		if ( !extension_loaded( 'imagick' ) ) {
-			throw new RuntimeException( 'Extension:WebP requires Imagick' );
+		if ( !extension_loaded( 'imagick' ) && !extension_loaded( 'gd' ) ) {
+			throw new RuntimeException( 'Extension:WebP requires Imagick or GD' );
 		}
 	}
 
@@ -220,7 +220,11 @@ class WebPTransformer {
 		$cwebpResult = $this->transformCwebp( $outPath, $width );
 
 		if ( !$cwebpResult ) {
-			return $this->transformImagick( $outPath, $width );
+			$imagickResult = $this->transformImagick( $outPath, $width );
+
+			if ( !$imagickResult ) {
+				return $this->transformGD( $outPath, $width );
+			}
 		}
 
 		return true;
@@ -284,6 +288,10 @@ class WebPTransformer {
 	 * @throws ImagickException
 	 */
 	private function transformImagick( string $outPath, int $width = -1 ): bool {
+		if ( !extension_loaded( 'imagick' ) ) {
+			return false;
+		}
+
 		$image = new Imagick( $this->file->getLocalRefPath() );
 
 		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
@@ -307,10 +315,51 @@ class WebPTransformer {
 		}
 
 		if ( $width > 0 ) {
-			$image->resizeImage( (int)$width, 0, Imagick::FILTER_CATROM, 1 );
+			$image->resizeImage( $width, 0, Imagick::FILTER_CATROM, 1 );
 		}
 
 		return $image->writeImage( sprintf( 'webp:%s', $outPath ) );
+	}
+
+	/**
+	 * Try conversion using GD
+	 *
+	 * @param string $outPath
+	 * @param int $width
+	 * @return bool
+	 */
+	private function transformGD( string $outPath, int $width = -1 ): bool {
+		if ( !extension_loaded( 'gd' ) ) {
+			return false;
+		}
+
+		switch ( $this->file->getMimeType() ) {
+			case 'image/jpg':
+			case 'image/jpeg':
+				$image = imagecreatefromjpeg( $this->file->getLocalRefPath() );
+				break;
+
+			case 'image/png':
+				$image = imagecreatefrompng( $this->file->getLocalRefPath() );
+				break;
+
+			default:
+				return false;
+		}
+
+		if ( $width > 0 ) {
+			$originalWidth = imagesx( $image );
+			$originalHeight = imagesy( $image );
+			$aspectRatio = $originalWidth / $originalHeight;
+
+			$height = (int)( $width / $aspectRatio );
+
+			$out = imagecreatetruecolor( $width, $height );
+
+			imagecopyresampled( $out, $image, 0, 0, 0, 0, $width, $height, $originalWidth, $originalHeight );
+		}
+
+		return imagewebp( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
 	}
 
 	/**
