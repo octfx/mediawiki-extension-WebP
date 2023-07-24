@@ -170,11 +170,7 @@ class WebPTransformer {
 	 * @return string
 	 */
 	public static function changeExtensionWebp( string $path ): string {
-		return str_replace(
-			pathinfo( $path, PATHINFO_EXTENSION ),
-			'webp',
-			$path
-		);
+		return sprintf( '%s.webp', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ) );
 	}
 
 	/**

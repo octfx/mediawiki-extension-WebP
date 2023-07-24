@@ -79,46 +79,42 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 		$file->getRepo()->quickCleanDir( $dir );
 	}
 
+	public function onPictureHtmlSupportBeforeProduceHtml( ThumbnailImage $thumbnail, array &$sources ): void {
+		if ( $thumbnail->getStoragePath() === false ) {
+			return;
+		}
 
+		$repo = $this->repoGroup->getLocalRepo();
 
-    public function onPictureHtmlSupportBeforeProduceHtml(ThumbnailImage $thumbnail, array &$sources): void
-    {
-        if ($thumbnail->getStoragePath() === false) {
-            return;
-        }
+		$pathLocal = WebPTransformer::changeExtensionWebp( $thumbnail->getStoragePath() );
 
-        $repo = $this->repoGroup->getLocalRepo();
+		$pathLocal = str_replace( [ 'local-public', 'local-thumb' ], [ 'local-public/webp', 'local-thumb/webp' ], $pathLocal );
 
-        $pathLocal = sprintf( '%s.webp', trim( substr( $thumbnail->getStoragePath(), 0, -( strlen( pathinfo( $thumbnail->getStoragePath(), PATHINFO_EXTENSION ) ) ) ), '.' ) );
+		$pathLocal = WebPTransformer::changeExtensionWebp( $pathLocal );
 
-        $pathLocal = str_replace( [ 'local-public', 'local-thumb' ], [ 'local-public/webp', 'local-thumb/webp' ], $pathLocal );
+		if ( !$repo->fileExists( $pathLocal ) ) {
+			$job = new TransformWebPImageJob( $thumbnail->getFile()->getTitle(), [
+				'title' => $thumbnail->getFile()->getTitle(),
+				'width' => $thumbnail->getWidth(),
+				'height' => $thumbnail->getHeight(),
+			] );
 
-        $pathLocal = WebPTransformer::changeExtensionWebp($pathLocal);
+			$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
+			$group->push( $job );
+		} else {
+			if ( $thumbnail->fileIsSource() ) {
+				$srcset = str_replace( '/images/', '/images/webp/', WebPTransformer::changeExtensionWebp( $thumbnail->getUrl() ) );
+			} else {
+				$srcset = str_replace( '/images/thumb/', '/images/thumb/webp/', WebPTransformer::changeExtensionWebp( $thumbnail->getUrl() ) );
+			}
 
-        if (!$repo->fileExists($pathLocal)) {
-            $job = new TransformWebPImageJob($thumbnail->getFile()->getTitle(), [
-                'title' => $thumbnail->getFile()->getTitle(),
-                'width' => $thumbnail->getWidth(),
-                'height' => $thumbnail->getHeight(),
-            ]);
-
-            $group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-
-            $group->push($job);
-        } else {
-            if ($thumbnail->fileIsSource()) {
-                $srcset = str_replace('/images/', '/images/webp/', WebPTransformer::changeExtensionWebp($thumbnail->getUrl()));
-            } else {
-                $srcset = str_replace('/images/thumb/', '/images/thumb/webp/', WebPTransformer::changeExtensionWebp($thumbnail->getUrl()));
-            }
-
-            $sources[] = [
-                'srcset' => $srcset,
-                'type' => 'image/webp',
-                'width' => $thumbnail->getWidth(),
-                'height' => $thumbnail->getHeight(),
-            ];
-        }
-    }
+			$sources[] = [
+				'srcset' => $srcset,
+				'type' => 'image/webp',
+				'width' => $thumbnail->getWidth(),
+				'height' => $thumbnail->getHeight(),
+			];
+		}
+	}
 }

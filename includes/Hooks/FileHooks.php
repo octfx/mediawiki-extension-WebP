@@ -81,7 +81,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
 		$repo->quickCleanDir( $oldPath );
 		$repo->quickCleanDir( $oldThumbPath );
-		$repo->quickCleanDir( 'mwstore://local-backend/local-public/webp',  );
+		$repo->quickCleanDir( 'mwstore://local-backend/local-public/webp' );
 		$repo->quickCleanDir( 'mwstore://local-backend/local-public/thumb/webp' );
 	}
 
@@ -111,7 +111,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 
 		try {
 			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-                $group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
+				$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
 				$group->push(
 					new TransformWebPImageJob(

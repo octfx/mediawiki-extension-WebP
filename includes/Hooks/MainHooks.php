@@ -53,17 +53,17 @@ class MainHooks implements UploadCompleteHook {
 	public static function setup(): void {
 		global $wgLocalFileRepo;
 
-        $wgLocalFileRepo['zones']['webp-public'] = [
-            'container' => 'local-public',
-            'urlsByExt' => [],
-            'directory' => 'webp',
-        ];
+		$wgLocalFileRepo['zones']['webp-public'] = [
+			'container' => 'local-public',
+			'urlsByExt' => [],
+			'directory' => 'webp',
+		];
 
-        $wgLocalFileRepo['zones']['webp-thumb'] = [
-            'container' => 'local-thumb',
-            'urlsByExt' => [],
-            'directory' => 'webp',
-        ];
+		$wgLocalFileRepo['zones']['webp-thumb'] = [
+			'container' => 'local-thumb',
+			'urlsByExt' => [],
+			'directory' => 'webp',
+		];
 	}
 
 	/**
@@ -92,7 +92,7 @@ class MainHooks implements UploadCompleteHook {
 
 		try {
 			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-                $group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
+				$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
 				$group->push(
 					new TransformWebPImageJob(
