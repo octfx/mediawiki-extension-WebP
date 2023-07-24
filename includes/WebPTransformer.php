@@ -402,7 +402,7 @@ class WebPTransformer {
 		return MediaWikiServices::getInstance()
 			->getRepoGroup()
 			->getLocalRepo()
-			->fileExists( "$root/$path" );
+			->fileExists( "$root/$path" ) ?? false;
 	}
 
 	/**

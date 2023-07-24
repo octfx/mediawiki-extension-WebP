@@ -25,8 +25,6 @@ namespace MediaWiki\Extension\WebP\Hooks;
 use Config;
 use ConfigException;
 use ImagickException;
-use JobQueueGroup;
-use MediaWiki\Extension\WebP\Repo\LocalWebPFileRepo;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
 use MediaWiki\Hook\UploadCompleteHook;
@@ -53,12 +51,19 @@ class MainHooks implements UploadCompleteHook {
 	 * Registers the extension as a local file repo
 	 */
 	public static function setup(): void {
-		global $wgLocalFileRepo, $wgGenerateThumbnailOnParse;
+		global $wgLocalFileRepo;
 
-		$wgLocalFileRepo['class'] = LocalWebPFileRepo::class;
-		$wgLocalFileRepo['name'] = 'local';
-		$wgLocalFileRepo['transformVia404'] = !$wgGenerateThumbnailOnParse;
-		$wgLocalFileRepo['backend'] = $wgLocalFileRepo['name'] . '-backend';
+        $wgLocalFileRepo['zones']['webp-public'] = [
+            'container' => 'local-public',
+            'urlsByExt' => [],
+            'directory' => 'webp',
+        ];
+
+        $wgLocalFileRepo['zones']['webp-thumb'] = [
+            'container' => 'local-thumb',
+            'urlsByExt' => [],
+            'directory' => 'webp',
+        ];
 	}
 
 	/**
@@ -87,11 +92,7 @@ class MainHooks implements UploadCompleteHook {
 
 		try {
 			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-				if ( method_exists( MediaWikiServices::class, 'getJobQueueGroupFactory' ) ) {
-					$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-				} else {
-					$group = JobQueueGroup::singleton();
-				}
+                $group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
 				$group->push(
 					new TransformWebPImageJob(

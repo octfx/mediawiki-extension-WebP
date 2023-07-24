@@ -26,7 +26,6 @@ use Config;
 use ConfigException;
 use File;
 use ImagickException;
-use JobQueueGroup;
 use LocalFile;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
@@ -82,6 +81,8 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
 		$repo->quickCleanDir( $oldPath );
 		$repo->quickCleanDir( $oldThumbPath );
+		$repo->quickCleanDir( 'mwstore://local-backend/local-public/webp',  );
+		$repo->quickCleanDir( 'mwstore://local-backend/local-public/thumb/webp' );
 	}
 
 	/**
@@ -110,11 +111,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 
 		try {
 			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-				if ( method_exists( MediaWikiServices::class, 'getJobQueueGroupFactory' ) ) {
-					$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-				} else {
-					$group = JobQueueGroup::singleton();
-				}
+                $group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
 				$group->push(
 					new TransformWebPImageJob(

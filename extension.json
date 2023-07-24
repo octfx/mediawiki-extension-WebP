@@ -9,7 +9,10 @@
 	"type": "media",
 	"version": "1.0.0",
 	"requires": {
-		"MediaWiki": ">= 1.35.0"
+		"MediaWiki": ">= 1.39.0",
+		"extensions": {
+			"PictureHtmlSupport": "*"
+		}
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\WebP\\": "includes/"
@@ -74,7 +77,6 @@
 		"WebPThumbnailHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\ThumbnailHooks",
 			"services": [
-				"MainConfig",
 				"RepoGroup"
 			]
 		}
@@ -84,7 +86,7 @@
 		"FileDeleteComplete": "WebPFileHooks",
 		"PageMoveComplete": "WebPFileHooks",
 		"UploadComplete": "WebPMainHooks",
-		"ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
+		"PictureHtmlSupportBeforeProduceHtml": "WebPThumbnailHooks",
 		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"
 	},
 	"MessagesDirs": {
