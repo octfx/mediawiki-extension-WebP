@@ -24,15 +24,17 @@ namespace MediaWiki\Extension\WebP\Hooks;
 
 use Config;
 use ConfigException;
-use ImagickException;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
+use MediaWiki\Hook\FileUndeleteCompleteHook;
 use MediaWiki\Hook\UploadCompleteHook;
 use MediaWiki\MediaWikiServices;
-use RuntimeException;
 use UploadBase;
 
-class MainHooks implements UploadCompleteHook {
+class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
+	public static $WEBP_PUBLIC_ZONE = 'webp-public';
+	public static $WEBP_THUMB_ZONE = 'webp-thumb';
+
 	/**
 	 * @var Config
 	 */
@@ -48,18 +50,18 @@ class MainHooks implements UploadCompleteHook {
 	}
 
 	/**
-	 * Registers the extension as a local file repo
+	 * Adds all required zones to the local file repo
 	 */
 	public static function setup(): void {
 		global $wgLocalFileRepo;
 
-		$wgLocalFileRepo['zones']['webp-public'] = [
+		$wgLocalFileRepo['zones'][self::$WEBP_PUBLIC_ZONE] = [
 			'container' => 'local-public',
 			'urlsByExt' => [],
 			'directory' => 'webp',
 		];
 
-		$wgLocalFileRepo['zones']['webp-thumb'] = [
+		$wgLocalFileRepo['zones'][self::$WEBP_THUMB_ZONE] = [
 			'container' => 'local-thumb',
 			'urlsByExt' => [],
 			'directory' => 'webp',
@@ -84,38 +86,37 @@ class MainHooks implements UploadCompleteHook {
 			return;
 		}
 
-		try {
-			$transformer = new WebPTransformer( $uploadBase->getLocalFile(), [ 'overwrite' => true ] );
-		} catch ( RuntimeException $e ) {
-			return;
-		}
+		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
-		try {
-			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-				$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
+		$group->push(
+			new TransformWebPImageJob(
+				$uploadBase->getTitle(),
+				[
+					'title' => $uploadBase->getTitle(),
+				]
+			)
+		);
+	}
 
-				$group->push(
-					new TransformWebPImageJob(
-						$uploadBase->getTitle(),
-						[
-							'title' => $uploadBase->getTitle(),
-							'overwrite' => true,
-						]
-					)
-				);
+	/**
+	 * Create webp files after un-deletion
+	 *
+	 * @param $title
+	 * @param $fileVersions
+	 * @param $user
+	 * @param $reason
+	 * @return void
+	 */
+	public function onFileUndeleteComplete( $title, $fileVersions, $user, $reason ) {
+		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
-				return;
-			}
-		} catch ( ConfigException $e ) {
-			return;
-		}
-
-		try {
-			$transformer->transform();
-		} catch ( ImagickException $e ) {
-			wfLogWarning( $e->getMessage() );
-
-			return;
-		}
+		$group->push(
+			new TransformWebPImageJob(
+				$title,
+				[
+					'title' => $title,
+				]
+			)
+		);
 	}
 }

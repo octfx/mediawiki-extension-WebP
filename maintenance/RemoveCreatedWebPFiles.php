@@ -1,6 +1,8 @@
 <?php
 
 declare( strict_types=1 );
+
+use MediaWiki\Extension\WebP\Hooks\MainHooks;
 use MediaWiki\MediaWikiServices;
 
 $IP = getenv( 'MW_INSTALL_PATH' );
@@ -23,9 +25,10 @@ class RemoveCreatedWebPFiles extends Maintenance {
 	}
 
 	public function execute() {
-		$images = 'mwstore://local-backend/local-public/webp';
-		$thumbs = 'mwstore://local-backend/local-public/thumb/webp';
 		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+
+		$images = $repo->getZonePath( MainHooks::$WEBP_PUBLIC_ZONE );
+		$thumbs = $repo->getZonePath( MainHooks::$WEBP_THUMB_ZONE );
 
 		if ( $this->getOption( 'thumbs' ) !== null ) {
 			$this->output( "Removing thumbnails\n" );

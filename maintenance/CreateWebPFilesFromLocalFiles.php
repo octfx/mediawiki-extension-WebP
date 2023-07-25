@@ -89,24 +89,9 @@ class CreateWebPFilesFromLocalFiles extends Maintenance {
 			}
 		}
 
-		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
-			if ( method_exists( MediaWikiServices::class, 'getJobQueueGroupFactory' ) ) {
-				$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-			} else {
-				$group = JobQueueGroup::singleton();
-			}
+		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
-			$group->push( $jobs );
-		} else {
-			foreach ( $jobs as $job ) {
-				$result = MediaWikiServices::getInstance()->getJobRunner()->executeJob( $job );
-				if ( !$result ) {
-					$this->error( $result['error'] ?? "Job {$job->getTitle()->getBaseText()} failed" );
-				} else {
-					$this->output( sprintf( "Done: %s (%s)\n", json_encode( $job->getParams() ), json_encode( $result ) ) );
-				}
-			}
-		}
+		$group->push( $jobs );
 	}
 
 	private function makeThumbnailJobs( string $title ): array {

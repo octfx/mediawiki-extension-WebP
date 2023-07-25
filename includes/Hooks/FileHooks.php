@@ -25,7 +25,6 @@ namespace MediaWiki\Extension\WebP\Hooks;
 use Config;
 use ConfigException;
 use File;
-use ImagickException;
 use LocalFile;
 use MediaWiki\Extension\WebP\TransformWebPImageJob;
 use MediaWiki\Extension\WebP\WebPTransformer;
@@ -34,7 +33,6 @@ use MediaWiki\Hook\FileTransformedHook;
 use MediaWiki\Hook\PageMoveCompleteHook;
 use MediaWiki\MediaWikiServices;
 use RepoGroup;
-use RuntimeException;
 
 class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMoveCompleteHook {
 	/**
@@ -64,10 +62,11 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	 * @inheritDoc
 	 */
 	public function onFileDeleteComplete( $file, $oldimage, $article, $user, $reason ): void {
-		$oldPath = sprintf( 'mwstore://local-backend/local-public/webp/%s', $file->getHashPath() );
-		$oldThumbPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $file->getHashPath() );
-
 		$repo = $this->repoGroup->getLocalRepo();
+
+		$oldPath = sprintf( '%s/%s', $repo->getZonePath( MainHooks::$WEBP_PUBLIC_ZONE ), $file->getHashPath() );
+		$oldThumbPath = sprintf( '%s/%s', $repo->getZonePath( MainHooks::$WEBP_THUMB_ZONE ), $file->getHashPath() );
+
 		$oldThumbs = $repo->getBackend()->getFileList( [
 			'dir' => $oldThumbPath
 		] );
@@ -79,10 +78,8 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$repo->quickPurge( sprintf( '%s/%s', $oldPath, WebPTransformer::changeExtensionWebp( $file->getName() ) ) );
 
 		$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
-		$repo->quickCleanDir( $oldPath );
-		$repo->quickCleanDir( $oldThumbPath );
-		$repo->quickCleanDir( 'mwstore://local-backend/local-public/webp' );
-		$repo->quickCleanDir( 'mwstore://local-backend/local-public/thumb/webp' );
+		$repo->quickCleanDir( $repo->getZonePath( MainHooks::$WEBP_PUBLIC_ZONE ) );
+		$repo->quickCleanDir( $repo->getZonePath( MainHooks::$WEBP_THUMB_ZONE ) );
 	}
 
 	/**
@@ -103,41 +100,18 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			return;
 		}
 
-		try {
-			$transformer = new WebPTransformer( $file, [ 'overwrite' => true, ] );
-		} catch ( RuntimeException $e ) {
-			return;
-		}
+		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
-		try {
-			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-				$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-
-				$group->push(
-					new TransformWebPImageJob(
-						$file->getTitle(),
-						[
-							'title' => $file->getTitle(),
-							'width' => $thumb->getWidth(),
-							'height' => $thumb->getHeight(),
-							'overwrite' => true,
-						]
-					)
-				);
-
-				return;
-			}
-		} catch ( ConfigException $e ) {
-			return;
-		}
-
-		try {
-			$transformer->transformLikeThumb( $thumb );
-		} catch ( ImagickException $e ) {
-			wfLogWarning( $e->getMessage() );
-
-			return;
-		}
+		$group->push(
+			new TransformWebPImageJob(
+				$file->getTitle(),
+				[
+					'title' => $file->getTitle(),
+					'width' => $thumb->getWidth(),
+					'height' => $thumb->getHeight(),
+				]
+			)
+		);
 	}
 
 	/**
@@ -163,8 +137,10 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$oldFile->load( File::READ_LATEST );
 		$newFile->load( File::READ_LATEST );
 
-		$oldPath = WebPTransformer::changeExtensionWebp( str_replace( 'local-public', 'local-public/webp', $oldFile->getPath() ) );
-		$newPath = WebPTransformer::changeExtensionWebp( str_replace( 'local-public', 'local-public/webp', $newFile->getPath() ) );
+		$path = $repo->getZonePath( MainHooks::$WEBP_PUBLIC_ZONE );
+
+		$oldPath = sprintf( '%s/%s%s', $path, $oldFile->getHashPath(), WebPTransformer::changeExtensionWebp( $oldFile->getName() ) );
+		$newPath = sprintf( '%s/%s%s', $path, $newFile->getHashPath(), WebPTransformer::changeExtensionWebp( $newFile->getName() ) );
 
 		$repo->getBackend()->prepare( [
 			'dir' => $this->getDirPath( $newPath )
@@ -200,9 +176,10 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 
 	private function moveThumbs( LocalFile $oldFile, LocalFile $newFile ): void {
 		$repo = $this->repoGroup->getLocalRepo();
+		$path = $repo->getZonePath( MainHooks::$WEBP_THUMB_ZONE );
 
-		$newPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $newFile->getHashPath() );
-		$oldPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $oldFile->getHashPath() );
+		$newPath = sprintf( '%s/%s', $path, $newFile->getHashPath() );
+		$oldPath = sprintf( '%s/%s', $path, $oldFile->getHashPath() );
 
 		$oldName = explode( '/', $oldFile->getPath() );
 		$oldName = array_pop( $oldName );

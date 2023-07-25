@@ -79,7 +79,7 @@ class TransformWebPImageJob extends Job {
 			return false;
 		}
 
-		if ( !$status->isOK() ) {
+		if ( !$status->isOK() && !str_contains( $status->getMessage()->plain(), 'already exists' ) ) {
 			$this->setLastError( $status->getMessage() );
 
 			return false;

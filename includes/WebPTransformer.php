@@ -30,6 +30,7 @@ use Imagick;
 use ImagickException;
 use ImagickPixel;
 use MediaTransformOutput;
+use MediaWiki\Extension\WebP\Hooks\MainHooks;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\ProcOpenError;
 use MediaWiki\Shell\Shell;
@@ -102,7 +103,7 @@ class WebPTransformer {
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
-		if ( $this->checkFileExists( $out, 'webp-thumb' ) && !$this->shouldOverwrite() ) {
+		if ( $this->checkFileExists( $out, MainHooks::$WEBP_THUMB_ZONE ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
@@ -114,7 +115,7 @@ class WebPTransformer {
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
-			'webp-thumb',
+			MainHooks::$WEBP_THUMB_ZONE,
 			$out,
 			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
@@ -138,7 +139,7 @@ class WebPTransformer {
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
-		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
+		if ( $this->checkFileExists( $out, MainHooks::$WEBP_PUBLIC_ZONE ) && !$this->shouldOverwrite() ) {
 			wfDebugLog( 'WebP', sprintf( '[%s::%s] File exists, skipping transform', 'WebPTransformer', __FUNCTION__ ) );
 
 			return Status::newGood();
@@ -152,7 +153,7 @@ class WebPTransformer {
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
-			'webp-public',
+			MainHooks::$WEBP_PUBLIC_ZONE,
 			$out,
 			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
@@ -364,7 +365,7 @@ class WebPTransformer {
 	 * @param Status $status
 	 */
 	private function logStatus( Status $status ): void {
-		if ( !$status->isOK() ) {
+		if ( !$status->isOK() && !str_contains( $status->getMessage()->plain(), 'already exists' ) ) {
 			wfLogWarning( sprintf( 'Extension:WebP could not write image "%s". Message: %s', $this->file->getName(), $status->getMessage() ) );
 		}
 	}

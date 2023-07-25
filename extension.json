@@ -20,7 +20,7 @@
 	"config": {
 		"WebPEnableConvertOnUpload": {
 			"description": "Enables WebP creation after a new image was uploaded",
-			"value": false
+			"value": true
 		},
 		"WebPEnableConvertOnTransform": {
 			"description": "Enables WebP creation after a thumbnail was created",
@@ -40,10 +40,6 @@
 		},
 		"WebPAutoFilter": {
 			"description": "Enable Auto Filter",
-			"value": true
-		},
-		"WebPConvertInJobQueue": {
-			"description": "Convert Files in JopQueue",
 			"value": true
 		},
 		"WebPThumbSizes": {

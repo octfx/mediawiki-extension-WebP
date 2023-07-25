@@ -79,42 +79,80 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 		$file->getRepo()->quickCleanDir( $dir );
 	}
 
+	/**
+	 * Add webp versions to the page output
+	 *
+	 * @param ThumbnailImage $thumbnail
+	 * @param array $sources
+	 * @return void
+	 */
 	public function onPictureHtmlSupportBeforeProduceHtml( ThumbnailImage $thumbnail, array &$sources ): void {
-		if ( $thumbnail->getStoragePath() === false ) {
+		if ( $thumbnail->getStoragePath() === false && !$thumbnail->fileIsSource() ) {
 			return;
 		}
 
 		$repo = $this->repoGroup->getLocalRepo();
+		$hash = $thumbnail->getFile()->getHashPath();
 
-		$pathLocal = WebPTransformer::changeExtensionWebp( $thumbnail->getStoragePath() );
+		// Generate the webp url and repo path
+		if ( $thumbnail->fileIsSource() ) {
+			$url = str_replace( '/images/', '/images/webp/', WebPTransformer::changeExtensionWebp( $thumbnail->getUrl() ) );
 
-		$pathLocal = str_replace( [ 'local-public', 'local-thumb' ], [ 'local-public/webp', 'local-thumb/webp' ], $pathLocal );
+			$path = $repo->getZonePath( MainHooks::$WEBP_PUBLIC_ZONE );
+			$filePath = explode( $hash, $thumbnail->getFile()->getPath() );
+			$filePath = array_pop( $filePath );
+		} else {
+			$url = str_replace( '/images/thumb/', '/images/thumb/webp/', WebPTransformer::changeExtensionWebp( $thumbnail->getUrl() ) );
 
-		$pathLocal = WebPTransformer::changeExtensionWebp( $pathLocal );
+			$path = $repo->getZonePath( MainHooks::$WEBP_THUMB_ZONE );
+			$filePath = explode( $hash, $thumbnail->getStoragePath() );
+			$filePath = array_pop( $filePath );
 
-		if ( !$repo->fileExists( $pathLocal ) ) {
-			$job = new TransformWebPImageJob( $thumbnail->getFile()->getTitle(), [
+			$srcset = [
+				$url
+			];
+
+			// Add higher resolutions to the srcset
+			foreach ( [ 1.5, 2 ] as $resolution ) {
+				$res = ( $thumbnail->getWidth() * $resolution );
+				$resUrl = str_replace( (string)$thumbnail->getWidth(), (string)$res, $url );
+
+				$srcset[] = sprintf( '%s %sx', $resUrl, $resolution );
+			}
+
+			$url = implode( ', ', $srcset );
+		}
+
+		$path = sprintf( '%s/%s%s', $path, $hash, WebPTransformer::changeExtensionWebp( $filePath ) );
+
+		// Check if the webp version exists in the repo
+		// If not, a job will be dispatched
+		if ( !$repo->fileExists( $path ) ) {
+			$params = [
 				'title' => $thumbnail->getFile()->getTitle(),
-				'width' => $thumbnail->getWidth(),
-				'height' => $thumbnail->getHeight(),
-			] );
+			];
+
+			if ( !$thumbnail->fileIsSource() ) {
+				$params += [
+					'width' => $thumbnail->getWidth(),
+					'height' => $thumbnail->getHeight(),
+				];
+			}
+
+			$job = new TransformWebPImageJob( $thumbnail->getFile()->getTitle(), $params );
 
 			$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
 			$group->push( $job );
-		} else {
-			if ( $thumbnail->fileIsSource() ) {
-				$srcset = str_replace( '/images/', '/images/webp/', WebPTransformer::changeExtensionWebp( $thumbnail->getUrl() ) );
-			} else {
-				$srcset = str_replace( '/images/thumb/', '/images/thumb/webp/', WebPTransformer::changeExtensionWebp( $thumbnail->getUrl() ) );
-			}
-
-			$sources[] = [
-				'srcset' => $srcset,
-				'type' => 'image/webp',
-				'width' => $thumbnail->getWidth(),
-				'height' => $thumbnail->getHeight(),
-			];
+			return;
 		}
+
+		// The webp file exists and is added to the output
+		$sources[] = [
+			'srcset' => $url,
+			'type' => 'image/webp',
+			'width' => $thumbnail->getWidth(),
+			'height' => $thumbnail->getHeight(),
+		];
 	}
 }
