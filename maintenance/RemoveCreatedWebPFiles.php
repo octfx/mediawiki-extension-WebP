@@ -1,8 +1,6 @@
 <?php
 
 declare( strict_types=1 );
-
-use MediaWiki\Extension\WebP\Hooks\MainHooks;
 use MediaWiki\MediaWikiServices;
 
 $IP = getenv( 'MW_INSTALL_PATH' );
@@ -26,35 +24,38 @@ class RemoveCreatedWebPFiles extends Maintenance {
 
 	public function execute() {
 		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+        $config = MediaWikiServices::getInstance()->getMainConfig();
 
-		$images = $repo->getZonePath( MainHooks::$WEBP_PUBLIC_ZONE );
-		$thumbs = $repo->getZonePath( MainHooks::$WEBP_THUMB_ZONE );
+        foreach ( $config->get( 'EnabledTransformers' ) as $transformer ) {
+            $images = $repo->getZonePath( 'public' ) . '/' . $transformer::getDirName();
+            $thumbs = $repo->getZonePath( 'thumb' ) . '/' . $transformer::getDirName();
 
-		if ( $this->getOption( 'thumbs' ) !== null ) {
-			$this->output( "Removing thumbnails\n" );
-			$delete = $this->getOption( 'force' ) !== null;
+            if ( $this->getOption( 'thumbs' ) !== null ) {
+                $this->output( "Removing thumbnails\n" );
+                $delete = $this->getOption( 'force' ) !== null;
 
-			$files = $repo->getBackend()->getFileList( [
-				'dir' => $thumbs
-			] );
+                $files = $repo->getBackend()->getFileList( [
+                    'dir' => $thumbs
+                ] );
 
-			$this->delete( $files, $thumbs, $delete );
+                $this->delete( $files, $thumbs, $delete );
 
-			$repo->quickCleanDir( $thumbs );
-		}
+                $repo->quickCleanDir( $thumbs );
+            }
 
-		if ( $this->getOption( 'images' ) !== null ) {
-			$this->output( "Removing images\n" );
-			$delete = $this->getOption( 'force' ) !== null;
+            if ( $this->getOption( 'images' ) !== null ) {
+                $this->output( "Removing images\n" );
+                $delete = $this->getOption( 'force' ) !== null;
 
-			$files = $repo->getBackend()->getFileList( [
-				'dir' => $images
-			] );
+                $files = $repo->getBackend()->getFileList( [
+                    'dir' => $images
+                ] );
 
-			$this->delete( $files, $images, $delete );
+                $this->delete( $files, $images, $delete );
 
-			$repo->quickCleanDir( $images );
-		}
+                $repo->quickCleanDir( $images );
+            }
+        }
 	}
 
 	private function delete( $files, $backend, bool $delete = false ): void {

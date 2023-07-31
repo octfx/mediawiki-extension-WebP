@@ -2,7 +2,7 @@
 
 declare( strict_types=1 );
 
-use MediaWiki\Extension\WebP\TransformWebPImageJob;
+use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\MediaWikiServices;
 
 $IP = getenv( 'MW_INSTALL_PATH' );
@@ -30,6 +30,7 @@ class CreateWebPFilesFromLocalFiles extends Maintenance {
 
 	public function execute() {
 		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getMaintenanceConnectionRef( DB_REPLICA );
+        $config = MediaWikiServices::getInstance()->getMainConfig();
 
 		if ( $this->hasOption( 'titles' ) ) {
 			$result = explode( ',', $this->getOption( 'titles' ) );
@@ -74,19 +75,22 @@ class CreateWebPFilesFromLocalFiles extends Maintenance {
 				continue;
 			}
 
-			if ( !$this->hasOption( 'only-thumbs' ) ) {
-				$jobs[] = new TransformWebPImageJob(
-					Title::newFromText( $item->page_title, NS_FILE ),
-					[
-						'title' => $item->page_title,
-						'overwrite' => $this->hasOption( 'overwrite' ),
-					]
-				);
-			}
+            foreach ( $config->get( 'EnabledTransformers' ) as $transformer ) {
+                if ( !$this->hasOption( 'only-thumbs' ) ) {
+                    $jobs[] = new TransformImageJob(
+                        Title::newFromText( $item->page_title, NS_FILE ),
+                        [
+                            'title' => $item->page_title,
+                            'overwrite' => $this->hasOption( 'overwrite' ),
+                            'transformer' => $transformer,
+                        ]
+                    );
+                }
+            }
 
-			if ( !$this->hasOption( 'no-thumbs' ) ) {
-				$jobs = array_merge( $jobs, $this->makeThumbnailJobs( $item->page_title ) );
-			}
+            if ( !$this->hasOption( 'no-thumbs' ) ) {
+                $jobs = array_merge( $jobs, $this->makeThumbnailJobs( $item->page_title ) );
+            }
 		}
 
 		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
@@ -95,8 +99,10 @@ class CreateWebPFilesFromLocalFiles extends Maintenance {
 	}
 
 	private function makeThumbnailJobs( string $title ): array {
+        $config = MediaWikiServices::getInstance()->getMainConfig();
+
 		try {
-			$sizes = MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPThumbSizes' );
+			$sizes = $config->get( 'WebPThumbSizes' );
 		} catch ( ConfigException $e ) {
 			$sizes = [];
 		}
@@ -108,15 +114,18 @@ class CreateWebPFilesFromLocalFiles extends Maintenance {
 		$jobs = [];
 
 		foreach ( $sizes as $size ) {
-			$jobs[] = new TransformWebPImageJob(
-				Title::newMainPage(),
-				[
-					'title' => $title,
-					'width' => $size,
-					'height' => 0, // Auto size,
-					'overwrite' => $this->hasOption( 'overwrite' ),
-				]
-			);
+            foreach ( $config->get( 'EnabledTransformers' ) as $transformer ) {
+                $jobs[] = new TransformImageJob(
+                    Title::newMainPage(),
+                    [
+                        'title' => $title,
+                        'width' => $size,
+                        'height' => 0, // Auto size,
+                        'overwrite' => $this->hasOption( 'overwrite' ),
+                        'transformer' => $transformer,
+                    ]
+                );
+            }
 		}
 
 		return $jobs;

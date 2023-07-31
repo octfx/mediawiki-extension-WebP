@@ -24,16 +24,15 @@ namespace MediaWiki\Extension\WebP\Hooks;
 
 use Config;
 use ConfigException;
-use MediaWiki\Extension\WebP\TransformWebPImageJob;
-use MediaWiki\Extension\WebP\WebPTransformer;
+use ExtensionRegistry;
+use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\Hook\FileUndeleteCompleteHook;
 use MediaWiki\Hook\UploadCompleteHook;
 use MediaWiki\MediaWikiServices;
+use RuntimeException;
 use UploadBase;
 
 class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
-	public static $WEBP_PUBLIC_ZONE = 'webp-public';
-	public static $WEBP_THUMB_ZONE = 'webp-thumb';
 
 	/**
 	 * @var Config
@@ -53,19 +52,13 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 	 * Adds all required zones to the local file repo
 	 */
 	public static function setup(): void {
-		global $wgLocalFileRepo;
+		if ( ExtensionRegistry::getInstance()->isLoaded( 'AWS' ) ) {
+			global $wgAWSRepoHashLevels;
 
-		$wgLocalFileRepo['zones'][self::$WEBP_PUBLIC_ZONE] = [
-			'container' => 'local-public',
-			'urlsByExt' => [],
-			'directory' => 'webp',
-		];
-
-		$wgLocalFileRepo['zones'][self::$WEBP_THUMB_ZONE] = [
-			'container' => 'local-thumb',
-			'urlsByExt' => [],
-			'directory' => 'webp',
-		];
+			if ( $wgAWSRepoHashLevels == 0 ) {
+				throw new RuntimeException( 'Extension:WebP requires $wgAWSRepoHashLevels to be non zero' );
+			}
+		}
 	}
 
 	/**
@@ -82,20 +75,23 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 			return;
 		}
 
-		if ( $uploadBase->getLocalFile() === null || !WebPTransformer::canTransform( $uploadBase->getLocalFile() ) ) {
+		if ( $uploadBase->getLocalFile() === null ) {
 			return;
 		}
 
 		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
-		$group->push(
-			new TransformWebPImageJob(
-				$uploadBase->getTitle(),
-				[
-					'title' => $uploadBase->getTitle(),
-				]
-			)
-		);
+        foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$group->push(
+				new TransformImageJob(
+					$uploadBase->getTitle(),
+					[
+						'title' => $uploadBase->getTitle(),
+						'transformer' => $transformer,
+					]
+				)
+			);
+		}
 	}
 
 	/**
@@ -110,13 +106,16 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 	public function onFileUndeleteComplete( $title, $fileVersions, $user, $reason ) {
 		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
-		$group->push(
-			new TransformWebPImageJob(
-				$title,
-				[
-					'title' => $title,
-				]
-			)
-		);
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$group->push(
+				new TransformImageJob(
+					$title,
+					[
+						'title' => $title,
+						'transformer' => $transformer,
+					]
+				)
+			);
+		}
 	}
 }

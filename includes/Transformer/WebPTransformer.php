@@ -20,7 +20,7 @@
 
 declare( strict_types=1 );
 
-namespace MediaWiki\Extension\WebP;
+namespace MediaWiki\Extension\WebP\Transformer;
 
 use ConfigException;
 use Exception;
@@ -30,7 +30,6 @@ use Imagick;
 use ImagickException;
 use ImagickPixel;
 use MediaTransformOutput;
-use MediaWiki\Extension\WebP\Hooks\MainHooks;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\ProcOpenError;
 use MediaWiki\Shell\Shell;
@@ -42,7 +41,7 @@ use TempFSFile;
 /**
  * Main class for transforming images into webp files
  */
-class WebPTransformer {
+class WebPTransformer implements MediaTransformer {
 
 	/**
 	 * Supported files
@@ -97,13 +96,15 @@ class WebPTransformer {
 			sprintf(
 				'%dpx-%s',
 				$thumb->getWidth(),
-				self::changeExtensionWebp( $this->file->getName() )
+				self::changeExtension( $this->file->getName() )
 			)
 		);
 
+		$out = self::getDirName() . '/' . $out;
+
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
-		if ( $this->checkFileExists( $out, MainHooks::$WEBP_THUMB_ZONE ) && !$this->shouldOverwrite() ) {
+		if ( $this->checkFileExists( $out, 'thumb' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
@@ -115,7 +116,7 @@ class WebPTransformer {
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
-			MainHooks::$WEBP_THUMB_ZONE,
+			'thumb',
 			$out,
 			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
@@ -135,11 +136,12 @@ class WebPTransformer {
 	public function transform(): Status {
 		$tempFile = $this->getTempFile();
 
-		$out = self::changeExtensionWebp( $this->file->getRel() );
+		$out = self::changeExtension( $this->file->getRel() );
+		$out = self::getDirName() . '/' . $out;
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
-		if ( $this->checkFileExists( $out, MainHooks::$WEBP_PUBLIC_ZONE ) && !$this->shouldOverwrite() ) {
+		if ( $this->checkFileExists( $out, 'public' ) && !$this->shouldOverwrite() ) {
 			wfDebugLog( 'WebP', sprintf( '[%s::%s] File exists, skipping transform', 'WebPTransformer', __FUNCTION__ ) );
 
 			return Status::newGood();
@@ -153,7 +155,7 @@ class WebPTransformer {
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
-			MainHooks::$WEBP_PUBLIC_ZONE,
+			'public',
 			$out,
 			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
@@ -170,7 +172,7 @@ class WebPTransformer {
 	 *
 	 * @return string
 	 */
-	public static function changeExtensionWebp( string $path ): string {
+	public static function changeExtension( string $path ): string {
 		return sprintf( '%s.webp', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ) );
 	}
 
@@ -425,5 +427,19 @@ class WebPTransformer {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public static function getDirName(): string {
+		return 'webp';
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public static function getMimeType(): string {
+		return 'image/webp';
 	}
 }

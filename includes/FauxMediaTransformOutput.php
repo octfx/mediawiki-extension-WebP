@@ -28,7 +28,7 @@ use MediaTransformOutput;
  * A wrapper for MediaTransformOutput
  * Currently used in Job Class
  */
-class FakeMediaTransformOutput extends MediaTransformOutput {
+class FauxMediaTransformOutput extends MediaTransformOutput {
 
 	public function __construct( int $width, int $height ) {
 		$this->width = $width;

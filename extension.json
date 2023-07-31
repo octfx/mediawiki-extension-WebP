@@ -51,6 +51,13 @@
 				1200,
 				1600
 			]
+		},
+		"EnabledTransformers": {
+			"description": "List of enabled image transformers",
+			"public": false,
+			"value": [
+				"MediaWiki\\Extension\\WebP\\Transformer\\WebPTransformer"
+			]
 		}
 	},
 	"ExtensionFunctions": [
@@ -73,6 +80,7 @@
 		"WebPThumbnailHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\ThumbnailHooks",
 			"services": [
+				"MainConfig",
 				"RepoGroup"
 			]
 		}
@@ -91,7 +99,7 @@
 		]
 	},
 	"JobClasses": {
-		"TransformWebPImage": "MediaWiki\\Extension\\WebP\\TransformWebPImageJob"
+		"TransformImage": "MediaWiki\\Extension\\WebP\\TransformImageJob"
 	},
 	"manifest_version": 2
 }
