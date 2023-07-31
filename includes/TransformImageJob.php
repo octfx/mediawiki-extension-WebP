@@ -44,20 +44,24 @@ class TransformImageJob extends Job {
 	 * @return bool
 	 */
 	public function run(): bool {
-		if ( !is_array( $this->params ) || !isset($this->params['transformer']) ) {
+		if ( !is_array( $this->params ) || !isset( $this->params['transformer'] ) ) {
 			$this->setLastError( 'Extension:WebP: Params is not an array.' );
 
 			return false;
 		}
 
-        wfDebugLog( 'WebP', sprintf( '[%s::%s] Running transform job for transformer %s', 'TransformImageJob', __FUNCTION__, $this->params['transformer'] ) );
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Running transform job for transformer %s', 'TransformImageJob', __FUNCTION__, $this->params['transformer'] ) );
 
-        $file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $this->params['title'] );
+		$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $this->params['title'] );
 
 		if ( !$file || !$file->exists() ) {
 			$this->setLastError( sprintf( 'Extension:WebP: File "%s" does not exist', $this->params['title'] ) );
 
 			return false;
+		}
+
+		if ( !$this->params['transformer']::canTransform( $file ) ) {
+			return true;
 		}
 
 		try {
@@ -81,9 +85,8 @@ class TransformImageJob extends Job {
 			return false;
 		}
 
-		if ( !$status->isOK() && !str_contains( $status->getMessage()->plain(), 'already exists' ) ) {
+		if ( !$status->isOK() && $status->getMessage()->getKey() !== 'backend-fail-alreadyexists' ) {
 			$this->setLastError( $status->getMessage() );
-
 			return false;
 		}
 

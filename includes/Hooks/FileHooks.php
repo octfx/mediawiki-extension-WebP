@@ -64,20 +64,20 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$repo = $this->repoGroup->getLocalRepo();
 
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-            $oldPath = sprintf( '%s/%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName(), $file->getHashPath() );
-            $oldThumbPath = sprintf( '%s/%s/%s', $repo->getZonePath( 'thumb' ), $transformer::getDirName(), $file->getHashPath() );
+			$oldPath = sprintf( '%s/%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName(), $file->getHashPath() );
+			$oldThumbPath = sprintf( '%s/%s/%s', $repo->getZonePath( 'thumb' ), $transformer::getDirName(), $file->getHashPath() );
 
-            $oldThumbs = $repo->getBackend()->getFileList( [
-                'dir' => $oldThumbPath
-            ] );
+			$oldThumbs = $repo->getBackend()->getFileList( [
+				'dir' => $oldThumbPath
+			] );
 
-            foreach ( $oldThumbs as $oldThumb ) {
-                $repo->quickPurge( sprintf( '%s/%s', $oldThumbPath, ltrim( $oldThumb, '/' ) ) );
-            }
+			foreach ( $oldThumbs as $oldThumb ) {
+				$repo->quickPurge( sprintf( '%s/%s', $oldThumbPath, ltrim( $oldThumb, '/' ) ) );
+			}
 
-            $repo->quickPurge( sprintf( '%s/%s', $oldPath, $transformer::changeExtension( $file->getName() ) ) );
+			$repo->quickPurge( sprintf( '%s/%s', $oldPath, $transformer::changeExtension( $file->getName() ) ) );
 
-            $repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
+			$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
 			$repo->quickCleanDir( $repo->getZonePath( 'public' ) . '/' . $transformer::getDirName() );
 			$repo->quickCleanDir( $repo->getZonePath( 'thumb' ) . '/' . $transformer::getDirName() );
 		}

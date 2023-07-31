@@ -81,7 +81,7 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 
 		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
 
-        foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
 			$group->push(
 				new TransformImageJob(
 					$uploadBase->getTitle(),

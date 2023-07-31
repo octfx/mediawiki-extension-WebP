@@ -70,9 +70,11 @@ class WebPTransformer implements MediaTransformer {
 
 		if ( !self::canTransform( $file ) ) {
 			throw new RuntimeException(
-				'Mimetype "%s" is not in supported mime: [%s]',
-				$file->getMimeType(),
-				implode( ', ', self::$supportedMimes )
+				sprintf(
+					'Mimetype "%s" is not in supported mime: [%s]',
+					$file->getMimeType(),
+					implode( ', ', self::$supportedMimes )
+				)
 			);
 		}
 
@@ -367,7 +369,7 @@ class WebPTransformer implements MediaTransformer {
 	 * @param Status $status
 	 */
 	private function logStatus( Status $status ): void {
-		if ( !$status->isOK() && !str_contains( $status->getMessage()->plain(), 'already exists' ) ) {
+		if ( !$status->isOK() && $status->getMessage()->getKey() !== 'backend-fail-alreadyexists' ) {
 			wfLogWarning( sprintf( 'Extension:WebP could not write image "%s". Message: %s', $this->file->getName(), $status->getMessage() ) );
 		}
 	}
