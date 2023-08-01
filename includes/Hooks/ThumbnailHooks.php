@@ -130,22 +130,24 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 					$url
 				];
 
-				// Add higher resolutions to the srcset
-				foreach ( [ 1.5, 2 ] as $resolution ) {
-					$res = ( $thumbnail->getWidth() * $resolution );
-					$resUrl = str_replace( (string)$thumbnail->getWidth(), (string)$res, $url );
+				if ( $this->mainConfig->get( 'ResponsiveImages' ) ) {
+					// Add higher resolutions to the srcset
+					foreach ( [ 1.5, 2 ] as $resolution ) {
+						$res = ( $thumbnail->getWidth() * $resolution );
+						$resUrl = str_replace( (string)$thumbnail->getWidth(), (string)$res, $url );
 
-					$this->jobQueueGroup->push( new TransformImageJob(
-						null,
-						[
-							'title' => $thumbnail->getFile()->getTitle(),
-							'transformer' => $transformer,
-							'width' => $res,
-                            'height' => ( $thumbnail->getHeight() * $resolution ),
-						]
-					) );
+						$this->jobQueueGroup->push( new TransformImageJob(
+							null,
+							[
+								'title' => $thumbnail->getFile()->getTitle(),
+								'transformer' => $transformer,
+								'width' => $res,
+								'height' => ( $thumbnail->getHeight() * $resolution ),
+							]
+						) );
 
-					$srcset[] = sprintf( '%s %sx', $resUrl, $resolution );
+						$srcset[] = sprintf( '%s %sx', $resUrl, $resolution );
+					}
 				}
 
 				$url = implode( ', ', $srcset );
