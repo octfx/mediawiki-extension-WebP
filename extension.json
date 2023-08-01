@@ -81,7 +81,8 @@
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\ThumbnailHooks",
 			"services": [
 				"MainConfig",
-				"RepoGroup"
+				"RepoGroup",
+				"JobQueueGroup"
 			]
 		}
 	},

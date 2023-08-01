@@ -24,10 +24,10 @@ namespace MediaWiki\Extension\WebP\Hooks;
 
 use Config;
 use FileBackendError;
+use JobQueueGroup;
 use MediaWiki\Extension\PictureHtmlSupport\Hook\PictureHtmlSupportBeforeProduceHtml;
 use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
-use MediaWiki\MediaWikiServices;
 use RepoGroup;
 use ThumbnailImage;
 
@@ -44,14 +44,21 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 	private $repoGroup;
 
 	/**
+	 * @var JobQueueGroup
+	 */
+	private $jobQueueGroup;
+
+	/**
 	 * ThumbnailHooks constructor.
 	 *
 	 * @param Config $mainConfig
 	 * @param RepoGroup $repoGroup
+	 * @param JobQueueGroup $jobQueueGroup
 	 */
-	public function __construct( Config $mainConfig, RepoGroup $repoGroup ) {
+	public function __construct( Config $mainConfig, RepoGroup $repoGroup, JobQueueGroup $jobQueueGroup ) {
 		$this->mainConfig = $mainConfig;
 		$this->repoGroup = $repoGroup;
+		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	/**
@@ -128,6 +135,16 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 					$res = ( $thumbnail->getWidth() * $resolution );
 					$resUrl = str_replace( (string)$thumbnail->getWidth(), (string)$res, $url );
 
+					$this->jobQueueGroup->push( new TransformImageJob(
+						null,
+						[
+							'title' => $thumbnail->getFile()->getTitle(),
+							'transformer' => $transformer,
+							'width' => $res,
+                            'height' => ( $thumbnail->getHeight() * $resolution ),
+						]
+					) );
+
 					$srcset[] = sprintf( '%s %sx', $resUrl, $resolution );
 				}
 
@@ -151,11 +168,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 					];
 				}
 
-				$job = new TransformImageJob( $thumbnail->getFile()->getTitle(), $params );
-
-				$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-
-				$group->push( $job );
+				$this->jobQueueGroup->push( new TransformImageJob( $thumbnail->getFile()->getTitle(), $params ) );
 				return;
 			}
 
