@@ -29,7 +29,6 @@ use FileRepo;
 use Imagick;
 use ImagickException;
 use ImagickPixel;
-use MediaTransformOutput;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\ProcOpenError;
 use MediaWiki\Shell\Shell;
@@ -49,7 +48,6 @@ class WebPTransformer implements MediaTransformer {
 	 * @var string[]
 	 */
 	public static $supportedMimes = [
-		// 'image/gif', -- Animations wont work
 		'image/jpeg',
 		'image/jpg',
 		'image/png',
@@ -85,24 +83,23 @@ class WebPTransformer implements MediaTransformer {
 	/**
 	 * Create a webp image based on thumbnail dimensions
 	 *
-	 * @param MediaTransformOutput $thumb
-	 *
+	 * @param int $width
 	 * @return Status
 	 *
 	 * @throws ImagickException
 	 */
-	public function transformLikeThumb( MediaTransformOutput $thumb ): Status {
+	public function transformLikeThumb( int $width ): Status {
 		$tempFile = $this->getTempFile();
 
 		$out = $this->file->getThumbRel(
 			sprintf(
 				'%dpx-%s',
-				$thumb->getWidth(),
+				$width,
 				self::changeExtension( $this->file->getName() )
 			)
 		);
 
-		$out = self::getDirName() . '/' . $out;
+		$out = sprintf( '%s/%s', self::getDirName(), $out );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
@@ -110,7 +107,7 @@ class WebPTransformer implements MediaTransformer {
 			return Status::newGood();
 		}
 
-		$result = $this->transformImage( $tempFile, (int)$thumb->getWidth() );
+		$result = $this->transformImage( $tempFile, $width );
 
 		if ( !$result ) {
 			return Status::newFatal( 'Could not convert Image' );
@@ -139,7 +136,7 @@ class WebPTransformer implements MediaTransformer {
 		$tempFile = $this->getTempFile();
 
 		$out = self::changeExtension( $this->file->getRel() );
-		$out = self::getDirName() . '/' . $out;
+		$out = sprintf( '%s/%s', self::getDirName(), $out );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 

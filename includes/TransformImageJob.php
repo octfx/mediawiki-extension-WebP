@@ -73,9 +73,7 @@ class TransformImageJob extends Job {
 
 		try {
 			if ( isset( $this->params['width'] ) ) {
-				$fakeThumb = new FauxMediaTransformOutput( (int)$this->params['width'], (int)$this->params['height'] );
-
-				$status = $transformer->transformLikeThumb( $fakeThumb );
+				$status = $transformer->transformLikeThumb( (int)$this->params['width'] );
 			} else {
 				$status = $transformer->transform();
 			}

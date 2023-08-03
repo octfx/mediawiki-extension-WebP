@@ -26,6 +26,10 @@
 			"description": "Enables WebP creation after a thumbnail was created",
 			"value": true
 		},
+		"WebPEnableResponsiveVersionJobs": {
+			"description": "Dispatch jobs for 1.5x and 2x file versions. Note: This runs for each thumbnail inclusion and may be disabled after all present thumbnails have been converted.",
+			"value": true
+		},
 		"WebPCheckAcceptHeader": {
 			"description": "Check if the accept header contains webp",
 			"value": false
@@ -64,20 +68,22 @@
 		"MediaWiki\\Extension\\WebP\\Hooks\\MainHooks::setup"
 	],
 	"HookHandlers": {
-		"WebPMainHooks": {
+		"MainHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\MainHooks",
 			"services": [
-				"MainConfig"
+				"MainConfig",
+				"JobQueueGroup"
 			]
 		},
-		"WebPFileHooks": {
+		"FileHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\FileHooks",
 			"services": [
 				"MainConfig",
-				"RepoGroup"
+				"RepoGroup",
+				"JobQueueGroup"
 			]
 		},
-		"WebPThumbnailHooks": {
+		"ThumbnailHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\ThumbnailHooks",
 			"services": [
 				"MainConfig",
@@ -87,12 +93,12 @@
 		}
 	},
 	"Hooks": {
-		"FileTransformed": "WebPFileHooks",
-		"FileDeleteComplete": "WebPFileHooks",
-		"PageMoveComplete": "WebPFileHooks",
-		"UploadComplete": "WebPMainHooks",
-		"PictureHtmlSupportBeforeProduceHtml": "WebPThumbnailHooks",
-		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"
+		"FileTransformed": "FileHooks",
+		"FileDeleteComplete": "FileHooks",
+		"PageMoveComplete": "FileHooks",
+		"UploadComplete": "MainHooks",
+		"PictureHtmlSupportBeforeProduceHtml": "ThumbnailHooks",
+		"LocalFilePurgeThumbnails": "ThumbnailHooks"
 	},
 	"MessagesDirs": {
 		"WebP": [

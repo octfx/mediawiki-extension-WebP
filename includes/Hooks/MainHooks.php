@@ -25,10 +25,10 @@ namespace MediaWiki\Extension\WebP\Hooks;
 use Config;
 use ConfigException;
 use ExtensionRegistry;
+use JobQueueGroup;
 use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\Hook\FileUndeleteCompleteHook;
 use MediaWiki\Hook\UploadCompleteHook;
-use MediaWiki\MediaWikiServices;
 use RuntimeException;
 use UploadBase;
 
@@ -40,18 +40,31 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 	private $mainConfig;
 
 	/**
+	 * @var JobQueueGroup
+	 */
+	private $jobQueueGroup;
+
+	/**
 	 * FileHooks constructor.
 	 *
 	 * @param Config $mainConfig
+	 * @param JobQueueGroup $jobQueueGroup
 	 */
-	public function __construct( Config $mainConfig ) {
+	public function __construct( Config $mainConfig, JobQueueGroup $jobQueueGroup ) {
 		$this->mainConfig = $mainConfig;
+		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	/**
-	 * Adds all required zones to the local file repo
+	 * Check various config values
 	 */
 	public static function setup(): void {
+		global $wgHashedUploadDirectory;
+
+		if ( $wgHashedUploadDirectory !== true ) {
+			throw new RuntimeException( 'Extension:WebP requires $wgHashedUploadDirectory to be true' );
+		}
+
 		if ( ExtensionRegistry::getInstance()->isLoaded( 'AWS' ) ) {
 			global $wgAWSRepoHashLevels;
 
@@ -79,12 +92,10 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 			return;
 		}
 
-		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-			$group->push(
+			$this->jobQueueGroup->push(
 				new TransformImageJob(
-					$uploadBase->getTitle(),
+					null,
 					[
 						'title' => $uploadBase->getTitle(),
 						'transformer' => $transformer,
@@ -103,13 +114,11 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 	 * @param $reason
 	 * @return void
 	 */
-	public function onFileUndeleteComplete( $title, $fileVersions, $user, $reason ) {
-		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-
+	public function onFileUndeleteComplete( $title, $fileVersions, $user, $reason ): void {
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-			$group->push(
+			$this->jobQueueGroup->push(
 				new TransformImageJob(
-					$title,
+					null,
 					[
 						'title' => $title,
 						'transformer' => $transformer,

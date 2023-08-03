@@ -78,7 +78,7 @@ class CreateWebPFilesFromLocalFiles extends Maintenance {
 			foreach ( $config->get( 'EnabledTransformers' ) as $transformer ) {
 				if ( !$this->hasOption( 'only-thumbs' ) ) {
 					$jobs[] = new TransformImageJob(
-						Title::newFromText( $item->page_title, NS_FILE ),
+						null,
 						[
 							'title' => $item->page_title,
 							'overwrite' => $this->hasOption( 'overwrite' ),
@@ -116,11 +116,10 @@ class CreateWebPFilesFromLocalFiles extends Maintenance {
 		foreach ( $sizes as $size ) {
 			foreach ( $config->get( 'EnabledTransformers' ) as $transformer ) {
 				$jobs[] = new TransformImageJob(
-					Title::newMainPage(),
+					null,
 					[
 						'title' => $title,
 						'width' => $size,
-						'height' => 0, // Auto size,
 						'overwrite' => $this->hasOption( 'overwrite' ),
 						'transformer' => $transformer,
 					]

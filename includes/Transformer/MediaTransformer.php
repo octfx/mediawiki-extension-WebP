@@ -3,7 +3,6 @@
 namespace MediaWiki\Extension\WebP\Transformer;
 
 use File;
-use MediaTransformOutput;
 use Status;
 
 interface MediaTransformer {
@@ -16,10 +15,10 @@ interface MediaTransformer {
 
 	/**
 	 * Transform the image like the passed thumbnail image
-	 * @param MediaTransformOutput $thumb
+	 * @param int $width Width of the thumb, height is inferred automatically
 	 * @return Status
 	 */
-	public function transformLikeThumb( MediaTransformOutput $thumb ): Status;
+	public function transformLikeThumb( int $width ): Status;
 
 	/**
 	 * Transform the source image

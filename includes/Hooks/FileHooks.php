@@ -25,12 +25,12 @@ namespace MediaWiki\Extension\WebP\Hooks;
 use Config;
 use ConfigException;
 use File;
+use JobQueueGroup;
 use LocalFile;
 use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\Hook\FileDeleteCompleteHook;
 use MediaWiki\Hook\FileTransformedHook;
 use MediaWiki\Hook\PageMoveCompleteHook;
-use MediaWiki\MediaWikiServices;
 use RepoGroup;
 
 class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMoveCompleteHook {
@@ -45,14 +45,21 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	private $repoGroup;
 
 	/**
+	 * @var JobQueueGroup
+	 */
+	private $jobQueueGroup;
+
+	/**
 	 * FileHooks constructor.
 	 *
 	 * @param Config $mainConfig
 	 * @param RepoGroup $repoGroup
+	 * @param JobQueueGroup $jobQueueGroup
 	 */
-	public function __construct( Config $mainConfig, RepoGroup $repoGroup ) {
+	public function __construct( Config $mainConfig, RepoGroup $repoGroup, JobQueueGroup $jobQueueGroup ) {
 		$this->mainConfig = $mainConfig;
 		$this->repoGroup = $repoGroup;
+		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	/**
@@ -78,8 +85,8 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			$repo->quickPurge( sprintf( '%s/%s', $oldPath, $transformer::changeExtension( $file->getName() ) ) );
 
 			$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
-			$repo->quickCleanDir( $repo->getZonePath( 'public' ) . '/' . $transformer::getDirName() );
-			$repo->quickCleanDir( $repo->getZonePath( 'thumb' ) . '/' . $transformer::getDirName() );
+			$repo->quickCleanDir( sprintf( '%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName() ) );
+			$repo->quickCleanDir( sprintf( '%s/%s', $repo->getZonePath( 'thumb' ), $transformer::getDirName() ) );
 		}
 	}
 
@@ -97,12 +104,10 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			return;
 		}
 
-		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
-
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-			$group->push(
+			$this->jobQueueGroup->push(
 				new TransformImageJob(
-					$file->getTitle(),
+					null,
 					[
 						'transformer' => $transformer,
 						'title' => $file->getTitle(),
@@ -138,7 +143,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$newFile->load( File::READ_LATEST );
 
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-			$path = $repo->getZonePath( 'public' ) . '/' . $transformer::getDirName();
+			$path = sprintf( '%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName() );
 
 			$oldPath = sprintf( '%s/%s%s', $path, $oldFile->getHashPath(), $transformer::changeExtension( $oldFile->getName() ) );
 			$newPath = sprintf( '%s/%s%s', $path, $newFile->getHashPath(), $transformer::changeExtension( $newFile->getName() ) );

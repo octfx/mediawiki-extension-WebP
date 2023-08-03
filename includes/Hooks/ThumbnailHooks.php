@@ -108,18 +108,22 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 		$repo = $this->repoGroup->getLocalRepo();
 		$hash = $thumbnail->getFile()->getHashPath();
 
+		if ( empty( $hash ) ) {
+			return;
+		}
+
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
 			$dir = $transformer::getDirName();
 
 			if ( $thumbnail->fileIsSource() ) {
-				$url = str_replace( '/images/', '/images/' . $dir . '/', $transformer::changeExtension( $thumbnail->getUrl() ) );
+				$url = str_replace( '/images/', sprintf( '/images/%s/', $dir ), $transformer::changeExtension( $thumbnail->getUrl() ) );
 
 				$path = $repo->getZonePath( 'public' );
 
 				$filePath = explode( $hash, $thumbnail->getFile()->getPath() );
 				$filePath = array_pop( $filePath );
 			} else {
-				$url = str_replace( '/images/thumb/', '/images/thumb/' . $dir . '/', $transformer::changeExtension( $thumbnail->getUrl() ) );
+				$url = str_replace( '/images/thumb/', sprintf( '/images/thumb/%s/', $dir ), $transformer::changeExtension( $thumbnail->getUrl() ) );
 
 				$path = $repo->getZonePath( 'thumb' );
 
@@ -133,18 +137,19 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 				if ( $this->mainConfig->get( 'ResponsiveImages' ) ) {
 					// Add higher resolutions to the srcset
 					foreach ( [ 1.5, 2 ] as $resolution ) {
-						$res = ( $thumbnail->getWidth() * $resolution );
+						$res = (int)( $thumbnail->getWidth() * $resolution );
 						$resUrl = str_replace( (string)$thumbnail->getWidth(), (string)$res, $url );
 
-						$this->jobQueueGroup->push( new TransformImageJob(
-							null,
-							[
-								'title' => $thumbnail->getFile()->getTitle(),
-								'transformer' => $transformer,
-								'width' => $res,
-								'height' => ( $thumbnail->getHeight() * $resolution ),
-							]
-						) );
+						if ( $this->mainConfig->get( 'WebPEnableResponsiveVersionJobs' ) === true ) {
+							$this->jobQueueGroup->push( new TransformImageJob(
+								null,
+								[
+									'title' => $thumbnail->getFile()->getTitle(),
+									'transformer' => $transformer,
+									'width' => $res,
+								]
+							) );
+						}
 
 						$srcset[] = sprintf( '%s %sx', $resUrl, $resolution );
 					}
@@ -153,7 +158,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 				$url = implode( ', ', $srcset );
 			}
 
-			$path = sprintf( '%s/' . $dir . '/%s%s', $path, $hash, $transformer::changeExtension( $filePath ) );
+			$path = sprintf( '%s/%s/%s%s', $path, $dir, $hash, $transformer::changeExtension( $filePath ) );
 
 			// Check if the webp version exists in the repo
 			// If not, a job will be dispatched
@@ -170,8 +175,8 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 					];
 				}
 
-				$this->jobQueueGroup->push( new TransformImageJob( $thumbnail->getFile()->getTitle(), $params ) );
-				return;
+				$this->jobQueueGroup->push( new TransformImageJob( null, $params ) );
+				continue;
 			}
 
 			// The webp file exists and is added to the output
