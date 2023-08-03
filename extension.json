@@ -58,7 +58,6 @@
 		},
 		"EnabledTransformers": {
 			"description": "List of enabled image transformers",
-			"public": false,
 			"value": [
 				"MediaWiki\\Extension\\WebP\\Transformer\\WebPTransformer"
 			]
