@@ -180,7 +180,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 			}
 
 			// The webp file exists and is added to the output
-			$sources[] = [
+			$sources[ $transformer::getMimeType() ] = [
 				'srcset' => $url,
 				'type' => $transformer::getMimeType(),
 				'width' => $thumbnail->getWidth(),
