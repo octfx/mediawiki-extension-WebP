@@ -297,7 +297,7 @@ class WebPTransformer implements MediaTransformer {
 		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
 		$image->setCompression( Imagick::COMPRESSION_JPEG );
 
-		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
+		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageFormat( 'webp' );
 		$image->setOption( 'webp:method', '6' );
 		$image->setOption( 'webp:low-memory', 'true' );
