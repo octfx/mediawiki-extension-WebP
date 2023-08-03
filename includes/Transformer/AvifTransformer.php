@@ -169,7 +169,7 @@ class AvifTransformer implements MediaTransformer {
 	 * @return string
 	 */
 	public static function changeExtension( string $path ): string {
-		return sprintf( '%s.webp', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ) );
+		return sprintf( '%s.avif', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ) );
 	}
 
 	/**
@@ -177,7 +177,7 @@ class AvifTransformer implements MediaTransformer {
 	 * @return bool
 	 */
 	public static function canTransform( File $file ): bool {
-		return in_array( $file->getMimeType(), self::$supportedMimes );
+		return in_array( $file->getMimeType(), self::$supportedMimes ) && extension_loaded( 'imagick' );
 	}
 
 	/**
@@ -237,7 +237,7 @@ class AvifTransformer implements MediaTransformer {
 //		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
 //		$image->setCompression( Imagick::COMPRESSION_JPEG );
 
-		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
+		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageFormat( 'avif' );
 
 		$profiles = $image->getImageProfiles( 'icc' );
