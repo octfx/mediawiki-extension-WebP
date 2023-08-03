@@ -7,10 +7,8 @@ Requires a working job queue, [Extension:PictureHtmlSupport](https://github.com/
 
 
 ## How does this work?
-The basic idea of this extension is to transparently change out all existing images of a wiki to webp versions without requiring a re-upload.  
-This works by installing a new file repo that first checks `/webp` sub-folders for existing files and falling back to the original version if nothing was found.  
-
-It works best when the thumb handler is active, as this will enable rendering webp thumbnails on the fly.
+After an upload or file transformation, a transform job is dispatched that creates a webp file version of the original file.  
+The PictureHtmlSupport extension then exposes a hook when a thumbnail is output. Extension:WebP uses this hook to add a `<source>` element to the output, containing the webp file version.
 
 ## Converting already uploaded images
 A maintenance script exists to convert already uploaded images:
@@ -54,32 +52,16 @@ $wgWebPEnableConvertOnTransform = true;
 
 
 ## Configuration
-| Key                             | Description                                                                                                                             | Example | Default                     |
-|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|---------|-----------------------------|
-| $wgWebPEnableConvertOnUpload    | Enables WebP creation after a new image was uploaded. Doesn't work for copy uploads.                                                    | true    | false                       |
-| $wgWebPEnableConvertOnTransform | Enables WebP creation after a thumbnail was created. This isn't necessary if a thumbhandler is active.                                  | false   | true                        |
-| $wgWebPCheckAcceptHeader        | Check if the accept header contains webp. If not the original file will be served.                                                      | true    | false                       |
-| $wgWebPCompressionQuality       | Compression Quality. Lower means worse.                                                                                                 | 50      | 80                          |
-| $wgWebPFilterStrength           | Alpha compression strength. Sets imagick `webp:alpha-quality` and `cwebp -alpha_q`. Lossless is 100.                                    | 50      | 80                          |
-| $wgWebPAutoFilter               | Enables the auto filter.  This algorithm will spend additional time optimizing the filtering strength to reach a well-balanced quality. | false   | true                        |
-| $wgWebPThumbSizes               | Thumbnail Sizes to create through the maintenance script                                                                                | [2400]  | [120, 320, 800, 1200, 1600] |
+| Key                                | Description                                                                                                                                                               | Example | Default                     |
+|------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|-----------------------------|
+| $wgWebPEnableConvertOnUpload       | Enables WebP creation after a new image was uploaded. Doesn't work for copy uploads.                                                                                      | true    | false                       |
+| $wgWebPEnableConvertOnTransform    | Enables WebP creation after a thumbnail was created. This isn't necessary if a thumbhandler is active.                                                                    | false   | true                        |
+| $wgWebPEnableResponsiveVersionJobs | Dispatch transform jobs for 1.5x and 2x file versions. Note: This runs for each thumbnail inclusion and may be disabled after all present thumbnails have been converted. | false   | true                        |
+| $wgWebPCheckAcceptHeader           | Check if the accept header contains webp. If not the original file will be served.                                                                                        | true    | false                       |
+| $wgWebPCompressionQuality          | Compression Quality. Lower means worse.                                                                                                                                   | 50      | 80                          |
+| $wgWebPFilterStrength              | Alpha compression strength. Sets imagick `webp:alpha-quality` and `cwebp -alpha_q`. Lossless is 100.                                                                      | 50      | 80                          |
+| $wgWebPAutoFilter                  | Enables the auto filter.  This algorithm will spend additional time optimizing the filtering strength to reach a well-balanced quality.                                   | false   | true                        |
+| $wgWebPThumbSizes                  | Thumbnail Sizes to create through the maintenance script                                                                                                                  | [2400]  | [120, 320, 800, 1200, 1600] |
 
 ## De-Installation
 Delete the folders `images/webp` and `images/thumbs/webp` and remove the extension.
-
-
-## Current state
-Tested on a fresh local installation of MW 1.39.0-rc.1, in WSL, using PHP 7.4.30 and NGINX, installed as specified in this Readme.  
-Files were uploaded using the standard MW upload form, i.e., Special:Upload.  
-Test were conducted with and without thumbhandler active.  
-
-| Tested                             | Works  | Notes                                             |
-|------------------------------------|--------|---------------------------------------------------|
-| Upload of jpg and png files        | Yes    | WebP Thumbs are created                           |
-| Upload of unsupported files        | Yes    | Files are shown normally                          |
-| Automated creation of thumbnails   | Yes    |                                                   |
-| File moving                        | Yes    | Empty folder may remain                           |
-| File deletion                      | Mostly | One file errored out, but not reproducible        |
-| !! Uploading of new file versions  | ?      | Local tests worked, Reports say otherwise         |
-| Maintenance scripts: Create Images | Mostly | Job complains that files exist, files are created |
-| Maintenance scripts: Remove Images | Yes    | Empty folders remain                              |
