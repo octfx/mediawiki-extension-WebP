@@ -161,7 +161,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 
 			$path = sprintf( '%s/%s/%s%s', $path, $dir, $hash, $transformer::changeExtension( $filePath ) );
 
-			// Check if the webp version exists in the repo
+			// Check if the transformed source version exists in the repo
 			// If not, a job will be dispatched
 			if ( !$repo->fileExists( $path ) ) {
 				$params = [
@@ -180,7 +180,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 				continue;
 			}
 
-			// The webp file exists and is added to the output
+			// The transformed file exists and is added to the output
 			$sources[ $transformer::getMimeType() ] = [
 				'srcset' => $url,
 				'type' => $transformer::getMimeType(),
