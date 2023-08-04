@@ -46,6 +46,7 @@ class AvifTransformer implements MediaTransformer {
 		'image/jpeg',
 		'image/jpg',
 		'image/png',
+		// 'image/gif',
 	];
 
 	/**
@@ -247,7 +248,7 @@ class AvifTransformer implements MediaTransformer {
 			$image->resizeImage( $width, 0, Imagick::FILTER_CATROM, 1 );
 		}
 
-		return $image->writeImage( sprintf( 'avif:%s', $outPath ) );
+		return $image->writeImages( sprintf( 'avif:%s', $outPath ), true );
 	}
 
 	/**

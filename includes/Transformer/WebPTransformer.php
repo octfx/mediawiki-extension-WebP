@@ -51,6 +51,7 @@ class WebPTransformer implements MediaTransformer {
 		'image/jpeg',
 		'image/jpg',
 		'image/png',
+		// 'image/gif',
 	];
 
 	/**
@@ -290,6 +291,8 @@ class WebPTransformer implements MediaTransformer {
 			return false;
 		}
 
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting Imagick transform.', 'WebPTransformer', __FUNCTION__ ) );
+
 		$image = new Imagick( $this->file->getLocalRefPath() );
 
 		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
@@ -316,7 +319,11 @@ class WebPTransformer implements MediaTransformer {
 			$image->resizeImage( $width, 0, Imagick::FILTER_CATROM, 1 );
 		}
 
-		return $image->writeImage( sprintf( 'webp:%s', $outPath ) );
+		$imagickResult = $image->writeImages( sprintf( 'webp:%s', $outPath ), true );
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $imagickResult ) );
+
+		return $imagickResult;
 	}
 
 	/**
@@ -341,9 +348,15 @@ class WebPTransformer implements MediaTransformer {
 				$image = imagecreatefrompng( $this->file->getLocalRefPath() );
 				break;
 
+			case 'image/gif':
+				$image = imagecreatefromgif( $this->file->getLocalRefPath() );
+				break;
+
 			default:
 				return false;
 		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting GD transform.', 'WebPTransformer', __FUNCTION__ ) );
 
 		if ( $width > 0 ) {
 			$originalWidth = imagesx( $image );
@@ -357,7 +370,12 @@ class WebPTransformer implements MediaTransformer {
 			imagecopyresampled( $out, $image, 0, 0, 0, 0, $width, $height, $originalWidth, $originalHeight );
 		}
 
-		return imagewebp( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
+		imagepalettetotruecolor( $image );
+		$gdResult = imagewebp( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult ) );
+
+		return $gdResult;
 	}
 
 	/**
