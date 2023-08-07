@@ -1,13 +1,13 @@
 {
 	"name": "WebP",
 	"author": [
-		"Octfx"
+		"[https://www.mediawiki.org/wiki/User:Octfx Octfx]"
 	],
 	"url": "https://www.mediawiki.org/wiki/Extension:WebP",
 	"descriptionmsg": "webp-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "media",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"requires": {
 		"MediaWiki": ">= 1.39.0",
 		"extensions": {
