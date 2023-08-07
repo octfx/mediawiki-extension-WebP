@@ -24,40 +24,54 @@ namespace MediaWiki\Extension\WebP\Hooks;
 
 use Config;
 use ConfigException;
-use ImagickException;
+use ExtensionRegistry;
 use JobQueueGroup;
-use MediaWiki\Extension\WebP\Repo\LocalWebPFileRepo;
-use MediaWiki\Extension\WebP\TransformWebPImageJob;
-use MediaWiki\Extension\WebP\WebPTransformer;
+use MediaWiki\Extension\WebP\TransformImageJob;
+use MediaWiki\Hook\FileUndeleteCompleteHook;
 use MediaWiki\Hook\UploadCompleteHook;
 use RuntimeException;
 use UploadBase;
 
-class MainHooks implements UploadCompleteHook {
+class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
+
 	/**
 	 * @var Config
 	 */
 	private $mainConfig;
 
 	/**
+	 * @var JobQueueGroup
+	 */
+	private $jobQueueGroup;
+
+	/**
 	 * FileHooks constructor.
 	 *
 	 * @param Config $mainConfig
+	 * @param JobQueueGroup $jobQueueGroup
 	 */
-	public function __construct( Config $mainConfig ) {
+	public function __construct( Config $mainConfig, JobQueueGroup $jobQueueGroup ) {
 		$this->mainConfig = $mainConfig;
+		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	/**
-	 * Registers the extension as a local file repo
+	 * Check various config values
 	 */
 	public static function setup(): void {
-		global $wgLocalFileRepo, $wgGenerateThumbnailOnParse;
+		global $wgHashedUploadDirectory;
 
-		$wgLocalFileRepo['class'] = LocalWebPFileRepo::class;
-		$wgLocalFileRepo['name'] = 'local';
-		$wgLocalFileRepo['transformVia404'] = !$wgGenerateThumbnailOnParse;
-		$wgLocalFileRepo['backend'] = $wgLocalFileRepo['name'] . '-backend';
+		if ( $wgHashedUploadDirectory !== true ) {
+			throw new RuntimeException( 'Extension:WebP requires $wgHashedUploadDirectory to be true' );
+		}
+
+		if ( ExtensionRegistry::getInstance()->isLoaded( 'AWS' ) ) {
+			global $wgAWSRepoHashLevels;
+
+			if ( $wgAWSRepoHashLevels == 0 ) {
+				throw new RuntimeException( 'Extension:WebP requires $wgAWSRepoHashLevels to be non zero' );
+			}
+		}
 	}
 
 	/**
@@ -74,40 +88,43 @@ class MainHooks implements UploadCompleteHook {
 			return;
 		}
 
-		if ( $uploadBase->getLocalFile() === null || !WebPTransformer::canTransform( $uploadBase->getLocalFile() ) ) {
+		if ( $uploadBase->getLocalFile() === null ) {
 			return;
 		}
 
-		try {
-			$transformer = new WebPTransformer( $uploadBase->getLocalFile(), [ 'overwrite' => true ] );
-		} catch ( RuntimeException $e ) {
-			return;
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$this->jobQueueGroup->push(
+				new TransformImageJob(
+					null,
+					[
+						'title' => $uploadBase->getTitle(),
+						'transformer' => $transformer,
+					]
+				)
+			);
 		}
+	}
 
-		try {
-			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-				JobQueueGroup::singleton()->push(
-					new TransformWebPImageJob(
-						$uploadBase->getTitle(),
-						[
-							'title' => $uploadBase->getTitle(),
-							'overwrite' => true,
-						]
-					)
-				);
-
-				return;
-			}
-		} catch ( ConfigException $e ) {
-			return;
-		}
-
-		try {
-			$transformer->transform();
-		} catch ( ImagickException $e ) {
-			wfLogWarning( $e->getMessage() );
-
-			return;
+	/**
+	 * Create webp files after un-deletion
+	 *
+	 * @param $title
+	 * @param $fileVersions
+	 * @param $user
+	 * @param $reason
+	 * @return void
+	 */
+	public function onFileUndeleteComplete( $title, $fileVersions, $user, $reason ): void {
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$this->jobQueueGroup->push(
+				new TransformImageJob(
+					null,
+					[
+						'title' => $title,
+						'transformer' => $transformer,
+					]
+				)
+			);
 		}
 	}
 }

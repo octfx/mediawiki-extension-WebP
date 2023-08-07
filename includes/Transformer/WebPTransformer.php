@@ -20,7 +20,7 @@
 
 declare( strict_types=1 );
 
-namespace MediaWiki\Extension\WebP;
+namespace MediaWiki\Extension\WebP\Transformer;
 
 use ConfigException;
 use Exception;
@@ -29,7 +29,6 @@ use FileRepo;
 use Imagick;
 use ImagickException;
 use ImagickPixel;
-use MediaTransformOutput;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\ProcOpenError;
 use MediaWiki\Shell\Shell;
@@ -41,7 +40,7 @@ use TempFSFile;
 /**
  * Main class for transforming images into webp files
  */
-class WebPTransformer {
+class WebPTransformer implements MediaTransformer {
 
 	/**
 	 * Supported files
@@ -49,10 +48,10 @@ class WebPTransformer {
 	 * @var string[]
 	 */
 	public static $supportedMimes = [
-		// 'image/gif', -- Animations wont work
 		'image/jpeg',
 		'image/jpg',
 		'image/png',
+		// 'image/gif',
 	];
 
 	/**
@@ -70,9 +69,11 @@ class WebPTransformer {
 
 		if ( !self::canTransform( $file ) ) {
 			throw new RuntimeException(
-				'Mimetype "%s" is not in supported mime: [%s]',
-				$file->getMimeType(),
-				implode( ', ', self::$supportedMimes )
+				sprintf(
+					'Mimetype "%s" is not in supported mime: [%s]',
+					$file->getMimeType(),
+					implode( ', ', self::$supportedMimes )
+				)
 			);
 		}
 
@@ -83,30 +84,31 @@ class WebPTransformer {
 	/**
 	 * Create a webp image based on thumbnail dimensions
 	 *
-	 * @param MediaTransformOutput $thumb
-	 *
+	 * @param int $width
 	 * @return Status
 	 *
 	 * @throws ImagickException
 	 */
-	public function transformLikeThumb( MediaTransformOutput $thumb ): Status {
+	public function transformLikeThumb( int $width ): Status {
 		$tempFile = $this->getTempFile();
 
 		$out = $this->file->getThumbRel(
 			sprintf(
 				'%dpx-%s',
-				$thumb->getWidth(),
-				self::changeExtensionWebp( $this->file->getName() )
+				$width,
+				self::changeExtension( $this->file->getName() )
 			)
 		);
 
+		$out = sprintf( '%s/%s', self::getDirName(), $out );
+
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
-		if ( $this->checkFileExists( $out, 'webp-thumb' ) && !$this->shouldOverwrite() ) {
+		if ( $this->checkFileExists( $out, 'thumb' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
 		}
 
-		$result = $this->transformImage( $tempFile, (int)$thumb->getWidth() );
+		$result = $this->transformImage( $tempFile, $width );
 
 		if ( !$result ) {
 			return Status::newFatal( 'Could not convert Image' );
@@ -114,7 +116,7 @@ class WebPTransformer {
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
-			'webp-thumb',
+			'thumb',
 			$out,
 			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
@@ -134,11 +136,12 @@ class WebPTransformer {
 	public function transform(): Status {
 		$tempFile = $this->getTempFile();
 
-		$out = self::changeExtensionWebp( $this->file->getRel() );
+		$out = self::changeExtension( $this->file->getRel() );
+		$out = sprintf( '%s/%s', self::getDirName(), $out );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
-		if ( $this->checkFileExists( $out, 'webp-public' ) && !$this->shouldOverwrite() ) {
+		if ( $this->checkFileExists( $out, 'public' ) && !$this->shouldOverwrite() ) {
 			wfDebugLog( 'WebP', sprintf( '[%s::%s] File exists, skipping transform', 'WebPTransformer', __FUNCTION__ ) );
 
 			return Status::newGood();
@@ -152,7 +155,7 @@ class WebPTransformer {
 
 		$status = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->store(
 			$tempFile,
-			'webp-public',
+			'public',
 			$out,
 			( $this->shouldOverwrite() ? FileRepo::OVERWRITE : 0 ) & FileRepo::SKIP_LOCKING
 		);
@@ -169,12 +172,8 @@ class WebPTransformer {
 	 *
 	 * @return string
 	 */
-	public static function changeExtensionWebp( string $path ): string {
-		return str_replace(
-			pathinfo( $path, PATHINFO_EXTENSION ),
-			'webp',
-			$path
-		);
+	public static function changeExtension( string $path ): string {
+		return sprintf( '%s.webp', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ) );
 	}
 
 	/**
@@ -191,8 +190,8 @@ class WebPTransformer {
 	 * @throws RuntimeException
 	 */
 	private function checkImagickInstalled(): void {
-		if ( !extension_loaded( 'imagick' ) ) {
-			throw new RuntimeException( 'Extension:WebP requires Imagick' );
+		if ( !extension_loaded( 'imagick' ) && !extension_loaded( 'gd' ) ) {
+			throw new RuntimeException( 'Extension:WebP requires Imagick or GD' );
 		}
 	}
 
@@ -220,7 +219,11 @@ class WebPTransformer {
 		$cwebpResult = $this->transformCwebp( $outPath, $width );
 
 		if ( !$cwebpResult ) {
-			return $this->transformImagick( $outPath, $width );
+			$imagickResult = $this->transformImagick( $outPath, $width );
+
+			if ( !$imagickResult ) {
+				return $this->transformGD( $outPath, $width );
+			}
 		}
 
 		return true;
@@ -284,6 +287,12 @@ class WebPTransformer {
 	 * @throws ImagickException
 	 */
 	private function transformImagick( string $outPath, int $width = -1 ): bool {
+		if ( !extension_loaded( 'imagick' ) ) {
+			return false;
+		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting Imagick transform.', 'WebPTransformer', __FUNCTION__ ) );
+
 		$image = new Imagick( $this->file->getLocalRefPath() );
 
 		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
@@ -291,7 +300,7 @@ class WebPTransformer {
 		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
 		$image->setCompression( Imagick::COMPRESSION_JPEG );
 
-		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
+		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageFormat( 'webp' );
 		$image->setOption( 'webp:method', '6' );
 		$image->setOption( 'webp:low-memory', 'true' );
@@ -307,10 +316,66 @@ class WebPTransformer {
 		}
 
 		if ( $width > 0 ) {
-			$image->resizeImage( (int)$width, 0, Imagick::FILTER_CATROM, 1 );
+			$image->resizeImage( $width, 0, Imagick::FILTER_CATROM, 1 );
 		}
 
-		return $image->writeImage( sprintf( 'webp:%s', $outPath ) );
+		$imagickResult = $image->writeImages( sprintf( 'webp:%s', $outPath ), true );
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $imagickResult ) );
+
+		return $imagickResult;
+	}
+
+	/**
+	 * Try conversion using GD
+	 *
+	 * @param string $outPath
+	 * @param int $width
+	 * @return bool
+	 */
+	private function transformGD( string $outPath, int $width = -1 ): bool {
+		if ( !extension_loaded( 'gd' ) ) {
+			return false;
+		}
+
+		switch ( $this->file->getMimeType() ) {
+			case 'image/jpg':
+			case 'image/jpeg':
+				$image = imagecreatefromjpeg( $this->file->getLocalRefPath() );
+				break;
+
+			case 'image/png':
+				$image = imagecreatefrompng( $this->file->getLocalRefPath() );
+				break;
+
+			case 'image/gif':
+				$image = imagecreatefromgif( $this->file->getLocalRefPath() );
+				break;
+
+			default:
+				return false;
+		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting GD transform.', 'WebPTransformer', __FUNCTION__ ) );
+
+		if ( $width > 0 ) {
+			$originalWidth = imagesx( $image );
+			$originalHeight = imagesy( $image );
+			$aspectRatio = $originalWidth / $originalHeight;
+
+			$height = (int)( $width / $aspectRatio );
+
+			$out = imagecreatetruecolor( $width, $height );
+
+			imagecopyresampled( $out, $image, 0, 0, 0, 0, $width, $height, $originalWidth, $originalHeight );
+		}
+
+		imagepalettetotruecolor( $image );
+		$gdResult = imagewebp( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult ) );
+
+		return $gdResult;
 	}
 
 	/**
@@ -319,7 +384,7 @@ class WebPTransformer {
 	 * @param Status $status
 	 */
 	private function logStatus( Status $status ): void {
-		if ( !$status->isOK() ) {
+		if ( !$status->isOK() && $status->getMessage()->getKey() !== 'backend-fail-alreadyexists' ) {
 			wfLogWarning( sprintf( 'Extension:WebP could not write image "%s". Message: %s', $this->file->getName(), $status->getMessage() ) );
 		}
 	}
@@ -353,7 +418,7 @@ class WebPTransformer {
 		return MediaWikiServices::getInstance()
 			->getRepoGroup()
 			->getLocalRepo()
-			->fileExists( "$root/$path" );
+			->fileExists( "$root/$path" ) ?? false;
 	}
 
 	/**
@@ -379,5 +444,19 @@ class WebPTransformer {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public static function getDirName(): string {
+		return 'webp';
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public static function getMimeType(): string {
+		return 'image/webp';
 	}
 }

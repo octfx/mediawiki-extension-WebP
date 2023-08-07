@@ -1,16 +1,18 @@
 {
 	"name": "WebP",
 	"author": [
-		"Octfx"
+		"[https://www.mediawiki.org/wiki/User:Octfx Octfx]"
 	],
 	"url": "https://www.mediawiki.org/wiki/Extension:WebP",
 	"descriptionmsg": "webp-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "media",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"requires": {
-		"MediaWiki": ">= 1.35.0"
-
+		"MediaWiki": ">= 1.39.0",
+		"extensions": {
+			"PictureHtmlSupport": "*"
+		}
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\WebP\\": "includes/"
@@ -18,10 +20,14 @@
 	"config": {
 		"WebPEnableConvertOnUpload": {
 			"description": "Enables WebP creation after a new image was uploaded",
-			"value": false
+			"value": true
 		},
 		"WebPEnableConvertOnTransform": {
 			"description": "Enables WebP creation after a thumbnail was created",
+			"value": true
+		},
+		"WebPEnableResponsiveVersionJobs": {
+			"description": "Dispatch jobs for 1.5x and 2x file versions. Note: This runs for each thumbnail inclusion and may be disabled after all present thumbnails have been converted.",
 			"value": true
 		},
 		"WebPCheckAcceptHeader": {
@@ -30,7 +36,7 @@
 		},
 		"WebPCompressionQuality": {
 			"description": "Compression Quality",
-			"value": 80
+			"value": 75
 		},
 		"WebPFilterStrength": {
 			"description": "Filter Strength",
@@ -38,10 +44,6 @@
 		},
 		"WebPAutoFilter": {
 			"description": "Enable Auto Filter",
-			"value": true
-		},
-		"WebPConvertInJobQueue": {
-			"description": "Convert Files in JopQueue",
 			"value": true
 		},
 		"WebPThumbSizes": {
@@ -53,40 +55,49 @@
 				1200,
 				1600
 			]
+		},
+		"EnabledTransformers": {
+			"description": "List of enabled image transformers",
+			"value": [
+				"MediaWiki\\Extension\\WebP\\Transformer\\WebPTransformer"
+			]
 		}
 	},
 	"ExtensionFunctions": [
 		"MediaWiki\\Extension\\WebP\\Hooks\\MainHooks::setup"
 	],
 	"HookHandlers": {
-		"WebPMainHooks": {
+		"MainHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\MainHooks",
 			"services": [
-				"MainConfig"
+				"MainConfig",
+				"JobQueueGroup"
 			]
 		},
-		"WebPFileHooks": {
+		"FileHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\FileHooks",
 			"services": [
 				"MainConfig",
-				"RepoGroup"
+				"RepoGroup",
+				"JobQueueGroup"
 			]
 		},
-		"WebPThumbnailHooks": {
+		"ThumbnailHooks": {
 			"class": "MediaWiki\\Extension\\WebP\\Hooks\\ThumbnailHooks",
 			"services": [
 				"MainConfig",
-				"RepoGroup"
+				"RepoGroup",
+				"JobQueueGroup"
 			]
 		}
 	},
 	"Hooks": {
-		"FileTransformed": "WebPFileHooks",
-		"FileDeleteComplete": "WebPFileHooks",
-		"PageMoveCompleting": "WebPFileHooks",
-		"UploadComplete": "WebPMainHooks",
-		"ThumbnailBeforeProduceHTML": "WebPThumbnailHooks",
-		"LocalFilePurgeThumbnails": "WebPThumbnailHooks"
+		"FileTransformed": "FileHooks",
+		"FileDeleteComplete": "FileHooks",
+		"PageMoveComplete": "FileHooks",
+		"UploadComplete": "MainHooks",
+		"PictureHtmlSupportBeforeProduceHtml": "ThumbnailHooks",
+		"LocalFilePurgeThumbnails": "ThumbnailHooks"
 	},
 	"MessagesDirs": {
 		"WebP": [
@@ -94,7 +105,7 @@
 		]
 	},
 	"JobClasses": {
-		"TransformWebPImage": "MediaWiki\\Extension\\WebP\\TransformWebPImageJob"
+		"TransformImage": "MediaWiki\\Extension\\WebP\\TransformImageJob"
 	},
 	"manifest_version": 2
 }

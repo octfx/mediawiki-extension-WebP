@@ -2,7 +2,7 @@
 
 declare( strict_types=1 );
 
-use MediaWiki\Extension\WebP\TransformWebPImageJob;
+use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\MediaWikiServices;
 
 $IP = getenv( 'MW_INSTALL_PATH' );
@@ -11,12 +11,12 @@ if ( $IP === false ) {
 }
 require_once "$IP/maintenance/Maintenance.php";
 
-class ConvertImages extends Maintenance {
+class CreateFromLocalFiles extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 
-		$this->addDescription( 'Creates WebP versions of each uploaded File.' );
-		$this->addOption( 'no-thumbs', 'Disable WebP creation of thumbnails.' );
+		$this->addDescription( 'Creates transformed versions for each uploaded File.' );
+		$this->addOption( 'no-thumbs', 'Disable creation of thumbnails.' );
 		$this->addOption( 'only-thumbs', 'Only create thumbnails.' );
 		$this->addOption( 'thumb-sizes', 'Sizes of thumbs to generate. Provide a comma separated list of sizes like 1000,1200.' );
 		$this->addOption( 'titles', 'Work on these images instead of all. Provide a comma separated list of titles like Title1.jpg,Title2.jpg.' );
@@ -30,6 +30,7 @@ class ConvertImages extends Maintenance {
 
 	public function execute() {
 		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getMaintenanceConnectionRef( DB_REPLICA );
+		$config = MediaWikiServices::getInstance()->getMainConfig();
 
 		if ( $this->hasOption( 'titles' ) ) {
 			$result = explode( ',', $this->getOption( 'titles' ) );
@@ -74,14 +75,17 @@ class ConvertImages extends Maintenance {
 				continue;
 			}
 
-			if ( !$this->hasOption( 'only-thumbs' ) ) {
-				$jobs[] = new TransformWebPImageJob(
-					Title::newFromText( $item->page_title, NS_FILE ),
-					[
-						'title' => $item->page_title,
-						'overwrite' => $this->hasOption( 'overwrite' ),
-					]
-				);
+			foreach ( $config->get( 'EnabledTransformers' ) as $transformer ) {
+				if ( !$this->hasOption( 'only-thumbs' ) ) {
+					$jobs[] = new TransformImageJob(
+						null,
+						[
+							'title' => $item->page_title,
+							'overwrite' => $this->hasOption( 'overwrite' ),
+							'transformer' => $transformer,
+						]
+					);
+				}
 			}
 
 			if ( !$this->hasOption( 'no-thumbs' ) ) {
@@ -89,23 +93,16 @@ class ConvertImages extends Maintenance {
 			}
 		}
 
-		if ( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPConvertInJobQueue' ) === true ) {
-			JobQueueGroup::singleton()->push( $jobs );
-		} else {
-			foreach ( $jobs as $job ) {
-				$result = MediaWikiServices::getInstance()->getJobRunner()->executeJob( $job );
-				if ( !$result ) {
-					$this->error( $result['error'] ?? "Job {$job->getTitle()->getBaseText()} failed" );
-				} else {
-					$this->output( sprintf( "Done: %s (%s)\n", json_encode( $job->getParams() ), json_encode( $result ) ) );
-				}
-			}
-		}
+		$group = MediaWikiServices::getInstance()->getJobQueueGroupFactory()->makeJobQueueGroup();
+
+		$group->push( $jobs );
 	}
 
 	private function makeThumbnailJobs( string $title ): array {
+		$config = MediaWikiServices::getInstance()->getMainConfig();
+
 		try {
-			$sizes = MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPThumbSizes' );
+			$sizes = $config->get( 'WebPThumbSizes' );
 		} catch ( ConfigException $e ) {
 			$sizes = [];
 		}
@@ -117,20 +114,22 @@ class ConvertImages extends Maintenance {
 		$jobs = [];
 
 		foreach ( $sizes as $size ) {
-			$jobs[] = new TransformWebPImageJob(
-				Title::newMainPage(),
-				[
-					'title' => $title,
-					'width' => $size,
-					'height' => 0, // Auto size,
-					'overwrite' => $this->hasOption( 'overwrite' ),
-				]
-			);
+			foreach ( $config->get( 'EnabledTransformers' ) as $transformer ) {
+				$jobs[] = new TransformImageJob(
+					null,
+					[
+						'title' => $title,
+						'width' => $size,
+						'overwrite' => $this->hasOption( 'overwrite' ),
+						'transformer' => $transformer,
+					]
+				);
+			}
 		}
 
 		return $jobs;
 	}
 }
 
-$maintClass = ConvertImages::class;
+$maintClass = CreateFromLocalFiles::class;
 require_once RUN_MAINTENANCE_IF_MAIN;

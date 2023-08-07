@@ -24,19 +24,16 @@ namespace MediaWiki\Extension\WebP\Hooks;
 
 use Config;
 use ConfigException;
-use ImagickException;
+use File;
 use JobQueueGroup;
 use LocalFile;
-use MediaWiki\Extension\WebP\TransformWebPImageJob;
-use MediaWiki\Extension\WebP\WebPTransformer;
+use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\Hook\FileDeleteCompleteHook;
 use MediaWiki\Hook\FileTransformedHook;
-use MediaWiki\Hook\PageMoveCompletingHook;
+use MediaWiki\Hook\PageMoveCompleteHook;
 use RepoGroup;
-use RuntimeException;
 
-class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMoveCompletingHook {
-
+class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMoveCompleteHook {
 	/**
 	 * @var Config
 	 */
@@ -48,44 +45,53 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	private $repoGroup;
 
 	/**
+	 * @var JobQueueGroup
+	 */
+	private $jobQueueGroup;
+
+	/**
 	 * FileHooks constructor.
 	 *
 	 * @param Config $mainConfig
 	 * @param RepoGroup $repoGroup
+	 * @param JobQueueGroup $jobQueueGroup
 	 */
-	public function __construct( Config $mainConfig, RepoGroup $repoGroup ) {
+	public function __construct( Config $mainConfig, RepoGroup $repoGroup, JobQueueGroup $jobQueueGroup ) {
 		$this->mainConfig = $mainConfig;
 		$this->repoGroup = $repoGroup;
+		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	/**
-	 * Creates a webp version of an image after upload was completed
+	 * Deletes the converted files after the source file was deleted
 	 *
 	 * @inheritDoc
 	 */
 	public function onFileDeleteComplete( $file, $oldimage, $article, $user, $reason ): void {
-		$oldPath = sprintf( 'mwstore://local-backend/local-public/webp/%s', $file->getHashPath() );
-		$oldThumbPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $file->getHashPath() );
-
 		$repo = $this->repoGroup->getLocalRepo();
 
-		$oldThumbs = $repo->getBackend()->getFileList( [
-			'dir' => $oldThumbPath
-		] );
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$oldPath = sprintf( '%s/%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName(), $file->getHashPath() );
+			$oldThumbPath = sprintf( '%s/%s/%s', $repo->getZonePath( 'thumb' ), $transformer::getDirName(), $file->getHashPath() );
 
-		foreach ( $oldThumbs as $oldThumb ) {
-			$repo->quickPurge( sprintf( '%s/%s', $oldThumbPath, ltrim( $oldThumb, '/' ) ) );
+			$oldThumbs = $repo->getBackend()->getFileList( [
+				'dir' => $oldThumbPath
+			] );
+
+			foreach ( $oldThumbs as $oldThumb ) {
+				$repo->quickPurge( sprintf( '%s/%s', $oldThumbPath, ltrim( $oldThumb, '/' ) ) );
+			}
+
+			$repo->quickPurge( sprintf( '%s/%s', $oldPath, $transformer::changeExtension( $file->getName() ) ) );
+
+			$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
+			$repo->quickCleanDir( sprintf( '%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName() ) );
+			$repo->quickCleanDir( sprintf( '%s/%s', $repo->getZonePath( 'thumb' ), $transformer::getDirName() ) );
 		}
-
-		$repo->quickPurge( sprintf( '%s/%s', $oldPath, WebPTransformer::changeExtensionWebp( $file->getName() ) ) );
-
-		$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
-		$repo->quickCleanDir( $oldPath );
-		$repo->quickCleanDir( $oldThumbPath );
 	}
 
 	/**
-	 * For each created thumbnail well create a webp version
+	 * For each created thumbnail create a file for each active transformer
 	 *
 	 * @inheritDoc
 	 */
@@ -98,42 +104,18 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			return;
 		}
 
-		if ( !WebPTransformer::canTransform( $file ) ) {
-			return;
-		}
-
-		try {
-			$transformer = new WebPTransformer( $file, [ 'overwrite' => true, ] );
-		} catch ( RuntimeException $e ) {
-			return;
-		}
-
-		try {
-			if ( $this->mainConfig->get( 'WebPConvertInJobQueue' ) === true ) {
-				JobQueueGroup::singleton()->push(
-					new TransformWebPImageJob(
-						$file->getTitle(),
-						[
-							'title' => $file->getTitle(),
-							'width' => $thumb->getWidth(),
-							'height' => $thumb->getHeight(),
-							'overwrite' => true,
-						]
-					)
-				);
-
-				return;
-			}
-		} catch ( ConfigException $e ) {
-			return;
-		}
-
-		try {
-			$transformer->transformLikeThumb( $thumb );
-		} catch ( ImagickException $e ) {
-			wfLogWarning( $e->getMessage() );
-
-			return;
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$this->jobQueueGroup->push(
+				new TransformImageJob(
+					null,
+					[
+						'transformer' => $transformer,
+						'title' => $file->getTitle(),
+						'width' => $thumb->getWidth(),
+						'height' => $thumb->getHeight(),
+					]
+				)
+			);
 		}
 	}
 
@@ -142,7 +124,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 	 *
 	 * @inheritDoc
 	 */
-	public function onPageMoveCompleting( $old, $new, $user, $pageid, $redirid, $reason, $revision ) {
+	public function onPageMoveComplete( $old, $new, $user, $pageid, $redirid, $reason, $revision ) {
 		$repo = $this->repoGroup->getLocalRepo();
 
 		$oldFile = $repo->newFile(
@@ -157,26 +139,35 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			return;
 		}
 
-		$oldPath = WebPTransformer::changeExtensionWebp( str_replace( 'local-public', 'local-public/webp', $oldFile->getPath() ) );
-		$newPath = WebPTransformer::changeExtensionWebp( str_replace( 'local-public', 'local-public/webp', $newFile->getPath() ) );
+		$oldFile->load( File::READ_LATEST );
+		$newFile->load( File::READ_LATEST );
 
-		$repo->getBackend()->prepare( [
-			'dir' => $this->getDirPath( $newPath )
-		] );
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$path = sprintf( '%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName() );
 
-		$status = $repo->getBackend()->move(
-			[
-				'src' => $oldPath,
-				'dst' => $newPath,
-			]
-		);
+			$oldPath = sprintf( '%s/%s%s', $path, $oldFile->getHashPath(), $transformer::changeExtension( $oldFile->getName() ) );
+			$newPath = sprintf( '%s/%s%s', $path, $newFile->getHashPath(), $transformer::changeExtension( $newFile->getName() ) );
 
-		if ( !$status->isOK() ) {
-			wfLogWarning( json_encode( $status->getErrors() ) );
+			$repo->getBackend()->prepare( [
+				'dir' => $this->getDirPath( $newPath )
+			] );
+
+			$status = $repo->getBackend()->move(
+				[
+					'src' => $oldPath,
+					'dst' => $newPath,
+				]
+			);
+
+			if ( !$status->isOK() ) {
+				wfLogWarning( json_encode( $status->getErrors() ) );
+			}
+
+			$repo->quickPurge( $this->getDirPath( $oldPath ) );
+			$repo->quickCleanDir( $this->getDirPath( $oldPath ) );
 		}
 
-		$repo->quickPurge( $this->getDirPath( $oldPath ) );
-		$repo->quickCleanDir( $this->getDirPath( $oldPath ) );
+		$this->repoGroup->clearCache();
 
 		$this->moveThumbs(
 			$oldFile,
@@ -193,38 +184,41 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 
 	private function moveThumbs( LocalFile $oldFile, LocalFile $newFile ): void {
 		$repo = $this->repoGroup->getLocalRepo();
+		$path = $repo->getZonePath( 'thumb' );
 
-		$newPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $newFile->getHashPath() );
-		$oldPath = sprintf( 'mwstore://local-backend/local-public/thumb/webp/%s', $oldFile->getHashPath() );
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$newPath = sprintf( '%s/%s/%s', $path, $transformer::getDirName(), $newFile->getHashPath() );
+			$oldPath = sprintf( '%s/%s/%s', $path, $transformer::getDirName(), $oldFile->getHashPath() );
 
-		$oldName = explode( '/', $oldFile->getPath() );
-		$oldName = array_pop( $oldName );
-		$ending = pathinfo( $oldName, PATHINFO_EXTENSION );
-		$oldName = str_replace( $ending, '', $oldName );
+			$oldName = explode( '/', $oldFile->getPath() );
+			$oldName = array_pop( $oldName );
+			$ending = pathinfo( $oldName, PATHINFO_EXTENSION );
+			$oldName = str_replace( $ending, '', $oldName );
 
-		$newName = explode( '/', $newFile->getPath() );
-		$newName = array_pop( $newName );
-		$ending = pathinfo( $newName, PATHINFO_EXTENSION );
-		$newName = str_replace( $ending, '', $newName );
+			$newName = explode( '/', $newFile->getPath() );
+			$newName = array_pop( $newName );
+			$ending = pathinfo( $newName, PATHINFO_EXTENSION );
+			$newName = str_replace( $ending, '', $newName );
 
-		$repo->getBackend()->prepare( [
-			'dir' => sprintf( '%s%s%s', $newPath, ltrim( $newName, '/' ), $ending )
-		] );
+			$repo->getBackend()->prepare( [
+				'dir' => sprintf( '%s%s%s', $newPath, ltrim( $newName, '/' ), $ending )
+			] );
 
-		$files = $repo->getBackend()->getFileList( [
-			'dir' => $oldPath
-		] );
+			$files = $repo->getBackend()->getFileList( [
+				'dir' => $oldPath
+			] );
 
-		foreach ( $files as $file ) {
-			$repo->getBackend()->move(
-				[
-					'src' => sprintf( '%s%s', $oldPath, $file ),
-					'dst' => sprintf( '%s%s', $newPath, str_replace( $oldName, $newName, $file ) ),
-				]
-			);
+			foreach ( $files as $file ) {
+				$repo->getBackend()->move(
+					[
+						'src' => sprintf( '%s%s', $oldPath, $file ),
+						'dst' => sprintf( '%s%s', $newPath, str_replace( $oldName, $newName, $file ) ),
+					]
+				);
+			}
+
+			$repo->quickPurge( $oldPath );
+			$repo->quickCleanDir( $oldPath );
 		}
-
-		$repo->quickPurge( $oldPath );
-		$repo->quickCleanDir( $oldPath );
 	}
 }

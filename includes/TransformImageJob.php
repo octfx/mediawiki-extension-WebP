@@ -31,11 +31,11 @@ use Title;
 /**
  * Creates webp images through the JobQueue
  */
-class TransformWebPImageJob extends Job {
+class TransformImageJob extends Job {
 	protected $removeDuplicates = true;
 
 	public function __construct( ?Title $title, array $params ) {
-		parent::__construct( 'TransformWebPImage', $title, $params );
+		parent::__construct( 'TransformImage', $params );
 	}
 
 	/**
@@ -44,11 +44,13 @@ class TransformWebPImageJob extends Job {
 	 * @return bool
 	 */
 	public function run(): bool {
-		if ( !is_array( $this->params ) ) {
+		if ( !is_array( $this->params ) || !isset( $this->params['transformer'] ) ) {
 			$this->setLastError( 'Extension:WebP: Params is not an array.' );
 
 			return false;
 		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Running transform job for transformer %s', 'TransformImageJob', __FUNCTION__, $this->params['transformer'] ) );
 
 		$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $this->params['title'] );
 
@@ -58,8 +60,12 @@ class TransformWebPImageJob extends Job {
 			return false;
 		}
 
+		if ( !$this->params['transformer']::canTransform( $file ) ) {
+			return true;
+		}
+
 		try {
-			$transformer = new WebPTransformer( $file, [ 'overwrite' => $this->params['overwrite'] ?? false ] );
+			$transformer = new $this->params['transformer']( $file, [ 'overwrite' => $this->params['overwrite'] ?? false ] );
 		} catch ( RuntimeException $e ) {
 			$this->setLastError( $e->getMessage() );
 			return false;
@@ -67,9 +73,7 @@ class TransformWebPImageJob extends Job {
 
 		try {
 			if ( isset( $this->params['width'] ) ) {
-				$fakeThumb = new FakeMediaTransformOutput( (int)$this->params['width'], (int)$this->params['height'] );
-
-				$status = $transformer->transformLikeThumb( $fakeThumb );
+				$status = $transformer->transformLikeThumb( (int)$this->params['width'] );
 			} else {
 				$status = $transformer->transform();
 			}
@@ -79,11 +83,12 @@ class TransformWebPImageJob extends Job {
 			return false;
 		}
 
-		if ( !$status->isOK() ) {
+		if ( !$status->isOK() && $status->getMessage()->getKey() !== 'backend-fail-alreadyexists' ) {
 			$this->setLastError( $status->getMessage() );
-
 			return false;
 		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform success', 'TransformImageJob', __FUNCTION__ ) );
 
 		return true;
 	}

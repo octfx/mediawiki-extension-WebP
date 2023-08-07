@@ -9,13 +9,13 @@ if ( $IP === false ) {
 }
 require_once "$IP/maintenance/Maintenance.php";
 
-class CleanImages extends Maintenance {
+class RemoveCreatedFiles extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 
-		$this->addDescription( 'Removes generated WebP files' );
-		$this->addOption( 'thumbs', 'Remove all generated webp thumbs' );
-		$this->addOption( 'images', 'Remove all generated webp images' );
+		$this->addDescription( 'Removes generated files' );
+		$this->addOption( 'thumbs', 'Remove all generated thumbs' );
+		$this->addOption( 'images', 'Remove all generated images' );
 		$this->addOption( 'force', 'Do the actual deletion.' );
 		$this->setBatchSize( 100 );
 
@@ -23,34 +23,38 @@ class CleanImages extends Maintenance {
 	}
 
 	public function execute() {
-		$images = 'mwstore://local-backend/local-public/webp';
-		$thumbs = 'mwstore://local-backend/local-public/thumb/webp';
 		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
+		$config = MediaWikiServices::getInstance()->getMainConfig();
 
-		if ( $this->getOption( 'thumbs' ) !== null ) {
-			$this->output( "Removing thumbnails\n" );
-			$delete = $this->getOption( 'force' ) !== null;
+		foreach ( $config->get( 'EnabledTransformers' ) as $transformer ) {
+			$images = $repo->getZonePath( 'public' ) . '/' . $transformer::getDirName();
+			$thumbs = $repo->getZonePath( 'thumb' ) . '/' . $transformer::getDirName();
 
-			$files = $repo->getBackend()->getFileList( [
-				'dir' => $thumbs
-			] );
+			if ( $this->getOption( 'thumbs' ) !== null ) {
+				$this->output( "Removing thumbnails\n" );
+				$delete = $this->getOption( 'force' ) !== null;
 
-			$this->delete( $files, $thumbs, $delete );
+				$files = $repo->getBackend()->getFileList( [
+					'dir' => $thumbs
+				] );
 
-			$repo->quickCleanDir( $thumbs );
-		}
+				$this->delete( $files, $thumbs, $delete );
 
-		if ( $this->getOption( 'images' ) !== null ) {
-			$this->output( "Removing images\n" );
-			$delete = $this->getOption( 'force' ) !== null;
+				$repo->quickCleanDir( $thumbs );
+			}
 
-			$files = $repo->getBackend()->getFileList( [
-				'dir' => $images
-			] );
+			if ( $this->getOption( 'images' ) !== null ) {
+				$this->output( "Removing images\n" );
+				$delete = $this->getOption( 'force' ) !== null;
 
-			$this->delete( $files, $images, $delete );
+				$files = $repo->getBackend()->getFileList( [
+					'dir' => $images
+				] );
 
-			$repo->quickCleanDir( $images );
+				$this->delete( $files, $images, $delete );
+
+				$repo->quickCleanDir( $images );
+			}
 		}
 	}
 
@@ -75,5 +79,5 @@ class CleanImages extends Maintenance {
 	}
 }
 
-$maintClass = CleanImages::class;
+$maintClass = RemoveCreatedFiles::class;
 require_once RUN_MAINTENANCE_IF_MAIN;

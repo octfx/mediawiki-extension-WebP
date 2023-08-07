@@ -1,6 +1,6 @@
 {
-	"name": "mediawiki/webp",
-	"version": "1.0.0",
+	"name": "octfx/webp",
+	"version": "2.0.0",
 	"type": "mediawiki-extension",
 	"description": "Generate WebP Versions of images",
 	"homepage": "https://github.com/octfx/mediawiki-extension-WebP",
@@ -29,5 +29,10 @@
 	},
 	"extra": {
 		"installer-name": "WebP"
+	},
+	"config": {
+		"allow-plugins": {
+			"composer/installers": true
+		}
 	}
 }

@@ -23,16 +23,16 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\WebP\Hooks;
 
 use Config;
-use ConfigException;
 use FileBackendError;
-use MediaWiki\Extension\WebP\WebPTransformer;
+use JobQueueGroup;
+use MediaWiki\Extension\PictureHtmlSupport\Hook\PictureHtmlSupportBeforeProduceHtml;
+use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\Hook\LocalFilePurgeThumbnailsHook;
-use MediaWiki\Hook\ThumbnailBeforeProduceHTMLHook;
 use RepoGroup;
-use RequestContext;
 use ThumbnailImage;
 
-class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforeProduceHTMLHook {
+class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupportBeforeProduceHtml {
+
 	/**
 	 * @var Config
 	 */
@@ -44,18 +44,25 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 	private $repoGroup;
 
 	/**
+	 * @var JobQueueGroup
+	 */
+	private $jobQueueGroup;
+
+	/**
 	 * ThumbnailHooks constructor.
 	 *
 	 * @param Config $mainConfig
 	 * @param RepoGroup $repoGroup
+	 * @param JobQueueGroup $jobQueueGroup
 	 */
-	public function __construct( Config $mainConfig, RepoGroup $repoGroup ) {
+	public function __construct( Config $mainConfig, RepoGroup $repoGroup, JobQueueGroup $jobQueueGroup ) {
 		$this->mainConfig = $mainConfig;
 		$this->repoGroup = $repoGroup;
+		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	/**
-	 * Clean old webp thumbs
+	 * Clean old thumbs
 	 * This is taken from LocalFile.php
 	 *
 	 * @inheritDoc
@@ -87,86 +94,99 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, ThumbnailBeforePro
 	}
 
 	/**
-	 * Change out the image link with a webp one, if the browser supports webp, and a local webp file exists
-	 * If the image contains the class 'no-webp' the original image will be returned
-	 *
-	 * @inheritDoc
-	 */
-	public function onThumbnailBeforeProduceHTML( $thumbnail, &$attribs, &$linkAttribs ): void {
-		$request = RequestContext::getMain();
-
-		if ( $this->shouldSkipThumbnailHook( $thumbnail, $request ) ) {
-			wfDebugLog( 'WebP', sprintf( '[%s::%s] Skipping ThumbnailHook for "%s"', 'ThumbnailHooks', __FUNCTION__, $thumbnail->getUrl() ) );
-
-			return;
-		}
-
-		if ( isset( $attribs['class'] ) && strpos( $attribs['class'], 'no-webp' ) !== false ) {
-			return;
-		}
-
-		$path = $thumbnail->getStoragePath();
-
-		if ( $path === false ) {
-			$path = $thumbnail->getFile()->getPath();
-		}
-
-		$webP = sprintf(
-			'%swebp',
-			substr( $thumbnail->getUrl(), 0, -( strlen( pathinfo( $thumbnail->getUrl(), PATHINFO_EXTENSION ) ) ) )
-		);
-
-		$pathLocal = sprintf( '%s.webp', trim( substr( $path, 0, -( strlen( pathinfo( $thumbnail->getUrl(), PATHINFO_EXTENSION ) ) ) ), '.' ) );
-
-		$pathLocal = str_replace( [ 'local-public', 'local-thumb' ], [ 'local-public/webp', 'local-thumb/webp' ], $pathLocal );
-
-		// TODO: Investigate
-		$pathLocal = str_replace( '/webp/webp', '/webp', $pathLocal );
-
-		if ( strpos( $webP, 'thumb/' ) !== false ) {
-			$webP = str_replace( 'thumb/', 'thumb/webp/', $webP );
-		} else {
-			$webP = str_replace( 'images/', 'images/webp/', $webP );
-		}
-
-		// TODO: Investigate
-		$webP = str_replace( '/webp/webp', '/webp', $webP );
-
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Path local is "%s"; WebP Url is "%s"', 'ThumbnailHooks', __FUNCTION__, $pathLocal, $webP ) );
-
-		if ( $this->repoGroup->getLocalRepo()->fileExists( $pathLocal ) ) {
-			$attribs['src'] = $webP;
-		}
-	}
-
-	/**
-	 * Skip the hook if the file in question can't be transformed,
-	 * the thumbnail has no image or no url
-	 *
-	 * or if the accept header should be checked and it does not contain webp
+	 * Add webp versions to the page output
 	 *
 	 * @param ThumbnailImage $thumbnail
-	 * @param ?RequestContext $request
-	 * @return bool True if hook should be skipped
+	 * @param array $sources
+	 * @return void
 	 */
-	private function shouldSkipThumbnailHook( ThumbnailImage $thumbnail, ?RequestContext $request ): bool {
-		if ( !WebPTransformer::canTransform( $thumbnail->getFile() ) ||
-			$thumbnail->getFile() === false ||
-			$thumbnail->getUrl() === false ||
-			strpos( $thumbnail->getUrl(), 'thumb.php' ) !== false
-		) {
-			return true;
+	public function onPictureHtmlSupportBeforeProduceHtml( ThumbnailImage $thumbnail, array &$sources ): void {
+		// File does not exist or is external
+		if ( $thumbnail->getStoragePath() === false && $thumbnail->getFile()->getPath() === false ) {
+			return;
 		}
 
-		try {
-			$accept = $request === null ? '' : $request->getRequest()->getHeader( 'ACCEPT' );
-			if ( $this->mainConfig->get( 'WebPCheckAcceptHeader' ) === true && strpos( $accept, 'image/webp' ) === false ) {
-				return true;
+		$repo = $this->repoGroup->getLocalRepo();
+		$hash = $thumbnail->getFile()->getHashPath();
+
+		if ( empty( $hash ) ) {
+			return;
+		}
+
+		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
+			$dir = $transformer::getDirName();
+
+			if ( $thumbnail->fileIsSource() ) {
+				$url = str_replace( '/images/', sprintf( '/images/%s/', $dir ), $transformer::changeExtension( $thumbnail->getUrl() ) );
+
+				$path = $repo->getZonePath( 'public' );
+
+				$filePath = explode( $hash, $thumbnail->getFile()->getPath() );
+				$filePath = array_pop( $filePath );
+			} else {
+				$url = str_replace( '/images/thumb/', sprintf( '/images/thumb/%s/', $dir ), $transformer::changeExtension( $thumbnail->getUrl() ) );
+
+				$path = $repo->getZonePath( 'thumb' );
+
+				$filePath = explode( $hash, $thumbnail->getStoragePath() );
+				$filePath = array_pop( $filePath );
+
+				$srcset = [
+					$url
+				];
+
+				if ( $this->mainConfig->get( 'ResponsiveImages' ) ) {
+					// Add higher resolutions to the srcset
+					foreach ( [ 1.5, 2 ] as $resolution ) {
+						$res = (int)( $thumbnail->getWidth() * $resolution );
+						$resUrl = str_replace( (string)$thumbnail->getWidth(), (string)$res, $url );
+
+						if ( $this->mainConfig->get( 'WebPEnableResponsiveVersionJobs' ) === true ) {
+							$this->jobQueueGroup->push( new TransformImageJob(
+								null,
+								[
+									'title' => $thumbnail->getFile()->getTitle(),
+									'transformer' => $transformer,
+									'width' => $res,
+								]
+							) );
+						}
+
+						$srcset[] = sprintf( '%s %sx', $resUrl, $resolution );
+					}
+				}
+
+				$url = implode( ', ', $srcset );
 			}
-		} catch ( ConfigException $e ) {
-			//
-		}
 
-		return false;
+			$path = sprintf( '%s/%s/%s%s', $path, $dir, $hash, $transformer::changeExtension( $filePath ) );
+
+			// Check if the transformed source version exists in the repo
+			// If not, a job will be dispatched
+			if ( !$repo->fileExists( $path ) ) {
+				$params = [
+					'title' => $thumbnail->getFile()->getTitle(),
+					'transformer' => $transformer,
+				];
+
+				if ( !$thumbnail->fileIsSource() ) {
+					$params += [
+						'width' => $thumbnail->getWidth(),
+						'height' => $thumbnail->getHeight(),
+					];
+				}
+
+				$this->jobQueueGroup->push( new TransformImageJob( null, $params ) );
+				continue;
+			}
+
+			// The transformed file exists and is added to the output
+			$sources[ $transformer::getMimeType() ] = [
+				'srcset' => $url,
+				'type' => $transformer::getMimeType(),
+				'width' => $thumbnail->getWidth(),
+				'height' => $thumbnail->getHeight(),
+			];
+		}
 	}
 }
