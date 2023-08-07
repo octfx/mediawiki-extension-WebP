@@ -1,6 +1,6 @@
 {
 	"name": "octfx/webp",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"type": "mediawiki-extension",
 	"description": "Generate WebP Versions of images",
 	"homepage": "https://github.com/octfx/mediawiki-extension-WebP",
