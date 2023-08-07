@@ -9,13 +9,13 @@ if ( $IP === false ) {
 }
 require_once "$IP/maintenance/Maintenance.php";
 
-class RemoveCreatedWebPFiles extends Maintenance {
+class RemoveCreatedFiles extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 
-		$this->addDescription( 'Removes generated WebP files' );
-		$this->addOption( 'thumbs', 'Remove all generated webp thumbs' );
-		$this->addOption( 'images', 'Remove all generated webp images' );
+		$this->addDescription( 'Removes generated files' );
+		$this->addOption( 'thumbs', 'Remove all generated thumbs' );
+		$this->addOption( 'images', 'Remove all generated images' );
 		$this->addOption( 'force', 'Do the actual deletion.' );
 		$this->setBatchSize( 100 );
 
@@ -79,5 +79,5 @@ class RemoveCreatedWebPFiles extends Maintenance {
 	}
 }
 
-$maintClass = RemoveCreatedWebPFiles::class;
+$maintClass = RemoveCreatedFiles::class;
 require_once RUN_MAINTENANCE_IF_MAIN;

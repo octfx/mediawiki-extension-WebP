@@ -11,12 +11,12 @@ if ( $IP === false ) {
 }
 require_once "$IP/maintenance/Maintenance.php";
 
-class CreateWebPFilesFromLocalFiles extends Maintenance {
+class CreateFromLocalFiles extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 
-		$this->addDescription( 'Creates WebP versions of each uploaded File.' );
-		$this->addOption( 'no-thumbs', 'Disable WebP creation of thumbnails.' );
+		$this->addDescription( 'Creates transformed versions for each uploaded File.' );
+		$this->addOption( 'no-thumbs', 'Disable creation of thumbnails.' );
 		$this->addOption( 'only-thumbs', 'Only create thumbnails.' );
 		$this->addOption( 'thumb-sizes', 'Sizes of thumbs to generate. Provide a comma separated list of sizes like 1000,1200.' );
 		$this->addOption( 'titles', 'Work on these images instead of all. Provide a comma separated list of titles like Title1.jpg,Title2.jpg.' );
@@ -131,5 +131,5 @@ class CreateWebPFilesFromLocalFiles extends Maintenance {
 	}
 }
 
-$maintClass = CreateWebPFilesFromLocalFiles::class;
+$maintClass = CreateFromLocalFiles::class;
 require_once RUN_MAINTENANCE_IF_MAIN;
