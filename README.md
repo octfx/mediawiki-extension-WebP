@@ -1,7 +1,8 @@
 # WebP Extension
 Upon file upload this extension creates a WebP (and Avif if active) version of the uploaded image and its thumbs.
 
-Requires a working job queue, [Extension:PictureHtmlSupport](https://github.com/StarCitizenWiki/mediawiki-extensions-PictureHtmlSupport), and a usable version of `imagick`, `libwebp (cwebp)`, or `gd` installed.
+Requires a working job queue, [Extension:PictureHtmlSupport](https://github.com/StarCitizenWiki/mediawiki-extensions-PictureHtmlSupport), and a usable version of `imagick`, `libwebp (cwebp)`, or `gd` installed.  
+As well as `$wgHashedUploadDirectory = true;`, and if Extension:AWS is active `$wgAWSRepoHashLevels` to be `>0`;
 
 ## How does this work?
 After an upload or file transformation, a transform job is dispatched that creates a webp (and avif if active) file version of the original file.  
