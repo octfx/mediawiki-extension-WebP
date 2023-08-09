@@ -58,7 +58,14 @@ wfLoadExtension( 'WebP' );
 | $wgWebPFilterStrength              | Alpha compression strength. Sets imagick `webp:alpha-quality` and `cwebp -alpha_q`. Lossless is 100.                                                                      | 50                                                                                                                         | 80                          |
 | $wgWebPAutoFilter                  | Enables the auto filter.  This algorithm will spend additional time optimizing the filtering strength to reach a well-balanced quality.                                   | false                                                                                                                      | true                        |
 | $wgWebPThumbSizes                  | Thumbnail Sizes to create through the maintenance script                                                                                                                  | [2400]                                                                                                                     | [120, 320, 800, 1200, 1600] |
-| $wgEnabledTransformers             | List of enabled image transformers                                                                                                                                        | [ "MediaWiki\\Extension\\WebP\\Transformer\\WebPTransformer", "MediaWiki\\Extension\\WebP\\Transformer\\AvifTransformer" ] | WebP Transformer            |
+| $wgEnabledTransformers             | List of enabled image transformers                                                                                                                                        | [ "MediaWiki\\Extension\\WebP\\Transformer\\AvifTransformer", "MediaWiki\\Extension\\WebP\\Transformer\\WebPTransformer" ] | WebP Transformer            |
+
+### Enabling Avif
+When enabling the Avif transformer, make sure that it is ordered before the webp transformer, as else the browser will pick the webp version.
+
+```php
+$wgEnabledTransformers = [ "MediaWiki\\Extension\\WebP\\Transformer\\AvifTransformer", "MediaWiki\\Extension\\WebP\\Transformer\\WebPTransformer" ];
+```
 
 ## De-Installation
 Delete the folders `images/webp` and `images/thumbs/webp` and remove the extension.  

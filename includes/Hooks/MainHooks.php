@@ -26,6 +26,7 @@ use Config;
 use ConfigException;
 use ExtensionRegistry;
 use JobQueueGroup;
+use MediaWiki\Extension\WebP\Transformer\WebPTransformer;
 use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\Hook\FileUndeleteCompleteHook;
 use MediaWiki\Hook\UploadCompleteHook;
@@ -59,7 +60,7 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 	 * Check various config values
 	 */
 	public static function setup(): void {
-		global $wgHashedUploadDirectory;
+		global $wgHashedUploadDirectory, $wgEnabledTransformers;
 
 		if ( $wgHashedUploadDirectory !== true ) {
 			throw new RuntimeException( 'Extension:WebP requires $wgHashedUploadDirectory to be true' );
@@ -71,6 +72,13 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 			if ( $wgAWSRepoHashLevels == 0 ) {
 				throw new RuntimeException( 'Extension:WebP requires $wgAWSRepoHashLevels to be non zero' );
 			}
+		}
+
+		if ( empty( $wgEnabledTransformers ) ) {
+			$wgEnabledTransformers = [ WebPTransformer::class ];
+		} else {
+			// So that Avif precedes WebP
+			sort( $wgEnabledTransformers );
 		}
 	}
 
