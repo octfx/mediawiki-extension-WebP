@@ -274,7 +274,11 @@ class AvifTransformer implements MediaTransformer {
 	 * @return bool
 	 */
 	private function transformGD( string $outPath, int $width = -1 ): bool {
-		if ( !extension_loaded( 'gd' ) || version_compare( PHP_VERSION, '8.1', '<' ) ) {
+		if (
+			!extension_loaded( 'gd' ) ||
+			PHP_VERSION_ID < 80100 ||
+			( gd_info()['AVIF Support'] ?? false ) === false
+		) {
 			return false;
 		}
 
