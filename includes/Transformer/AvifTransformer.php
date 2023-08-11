@@ -235,7 +235,8 @@ class AvifTransformer implements MediaTransformer {
 	 * @throws ImagickException
 	 */
 	private function transformImagick( string $outPath, int $width = -1 ): bool {
-		if ( !extension_loaded( 'imagick' ) ) {
+		// Transparent backgrounds only work in imagick 7+
+		if ( !extension_loaded( 'imagick' ) || ( Imagick::getVersion()['versionNumber'] ?? 0 ) <= 1691 ) {
 			return false;
 		}
 
