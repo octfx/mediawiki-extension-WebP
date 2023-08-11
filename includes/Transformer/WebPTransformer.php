@@ -51,7 +51,7 @@ class WebPTransformer implements MediaTransformer {
 		'image/jpeg',
 		'image/jpg',
 		'image/png',
-        'image/webp', // MW generates png/jpg thumbs for webp files
+		'image/webp', // MW generates png/jpg thumbs for webp files
 		// 'image/gif',
 	];
 
@@ -299,8 +299,9 @@ class WebPTransformer implements MediaTransformer {
 		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
 
 		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
-		$image->setCompression( Imagick::COMPRESSION_JPEG );
+		$image->setCompression( Imagick::COMPRESSION_BZIP );
 
+		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageFormat( 'webp' );
 		$image->setOption( 'webp:method', '6' );
@@ -353,11 +354,21 @@ class WebPTransformer implements MediaTransformer {
 				$image = imagecreatefromgif( $this->file->getLocalRefPath() );
 				break;
 
+			case 'image/webp':
+				$image = imagecreatefromwebp( $this->file->getLocalRefPath() );
+				break;
+
 			default:
 				return false;
 		}
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting GD transform.', 'WebPTransformer', __FUNCTION__ ) );
+
+		imagepalettetotruecolor( $image );
+		imagesavealpha( $image, true );
+
+		$transparency = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
+		imagefill( $image, 0, 0, $transparency );
 
 		if ( $width > 0 ) {
 			$originalWidth = imagesx( $image );
@@ -367,11 +378,14 @@ class WebPTransformer implements MediaTransformer {
 			$height = (int)( $width / $aspectRatio );
 
 			$out = imagecreatetruecolor( $width, $height );
+			imagepalettetotruecolor( $out );
+			imagesavealpha( $out, true );
+
+			imagefill( $out, 0, 0, $transparency );
 
 			imagecopyresampled( $out, $image, 0, 0, 0, 0, $width, $height, $originalWidth, $originalHeight );
 		}
 
-		imagepalettetotruecolor( $image );
 		$gdResult = imagewebp( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult ) );

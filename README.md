@@ -61,6 +61,7 @@ wfLoadExtension( 'WebP' );
 | $wgEnabledTransformers             | List of enabled image transformers                                                                                                                                        | [ "MediaWiki\\Extension\\WebP\\Transformer\\AvifTransformer", "MediaWiki\\Extension\\WebP\\Transformer\\WebPTransformer" ] | WebP Transformer            |
 
 ### Enabling Avif
+For full feature support you'll need to install Imagick v7, als v6.9 has multiple bugs.
 When enabling the Avif transformer, make sure that it is ordered before the webp transformer, as else the browser will pick the webp version.
 
 ```php

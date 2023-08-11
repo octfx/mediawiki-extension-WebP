@@ -215,7 +215,13 @@ class AvifTransformer implements MediaTransformer {
 			$outPath = $outPath->getPath();
 		}
 
-		return $this->transformImagick( $outPath, $width );
+		$result = $this->transformImagick( $outPath, $width );
+
+		if ( !$result ) {
+			$result = $this->transformGD( $outPath, $width );
+		}
+
+		return $result;
 	}
 
 	/**
@@ -235,9 +241,12 @@ class AvifTransformer implements MediaTransformer {
 
 		$image = new Imagick( $this->file->getLocalRefPath() );
 
-        $image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
-        $image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
+		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
 
+		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
+		$image->setCompression( Imagick::COMPRESSION_BZIP );
+
+		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageFormat( 'avif' );
 
@@ -254,6 +263,71 @@ class AvifTransformer implements MediaTransformer {
 		}
 
 		return $image->writeImages( sprintf( 'avif:%s', $outPath ), true );
+	}
+
+	/**
+	 * Try conversion using GD
+	 *
+	 * @param string $outPath
+	 * @param int $width
+	 * @return bool
+	 */
+	private function transformGD( string $outPath, int $width = -1 ): bool {
+		if ( !extension_loaded( 'gd' ) || version_compare( PHP_VERSION, '8.1', '<' ) ) {
+			return false;
+		}
+
+		switch ( $this->file->getMimeType() ) {
+			case 'image/jpg':
+			case 'image/jpeg':
+				$image = imagecreatefromjpeg( $this->file->getLocalRefPath() );
+				break;
+
+			case 'image/png':
+				$image = imagecreatefrompng( $this->file->getLocalRefPath() );
+				break;
+
+			case 'image/gif':
+				$image = imagecreatefromgif( $this->file->getLocalRefPath() );
+				break;
+
+			case 'image/webp':
+				$image = imagecreatefromwebp( $this->file->getLocalRefPath() );
+				break;
+
+			default:
+				return false;
+		}
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting GD transform.', 'AvifTransformer', __FUNCTION__ ) );
+
+		imagepalettetotruecolor( $image );
+		imagesavealpha( $image, true );
+
+		$transparency = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
+		imagefill( $image, 0, 0, $transparency );
+
+		if ( $width > 0 ) {
+			$originalWidth = imagesx( $image );
+			$originalHeight = imagesy( $image );
+			$aspectRatio = $originalWidth / $originalHeight;
+
+			$height = (int)( $width / $aspectRatio );
+
+			$out = imagecreatetruecolor( $width, $height );
+			imagepalettetotruecolor( $out );
+			imagesavealpha( $out, true );
+
+			imagefill( $out, 0, 0, $transparency );
+
+			imagecopyresampled( $out, $image, 0, 0, 0, 0, $width, $height, $originalWidth, $originalHeight );
+		}
+
+		$gdResult = imageavif( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
+
+		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult ) );
+
+		return $gdResult;
 	}
 
 	/**
