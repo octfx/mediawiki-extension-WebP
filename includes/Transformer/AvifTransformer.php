@@ -27,6 +27,7 @@ use File;
 use FileRepo;
 use Imagick;
 use ImagickException;
+use ImagickPixel;
 use MediaWiki\MediaWikiServices;
 use RuntimeException;
 use Status;
@@ -233,6 +234,9 @@ class AvifTransformer implements MediaTransformer {
 		}
 
 		$image = new Imagick( $this->file->getLocalRefPath() );
+
+        $image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
+        $image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
 
 		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageFormat( 'avif' );
