@@ -51,6 +51,7 @@ class WebPTransformer implements MediaTransformer {
 		'image/jpeg',
 		'image/jpg',
 		'image/png',
+        'image/webp', // MW generates png/jpg thumbs for webp files
 		// 'image/gif',
 	];
 
