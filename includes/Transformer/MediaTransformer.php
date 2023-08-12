@@ -43,12 +43,12 @@ interface MediaTransformer {
 	public static function canTransform( File $file ): bool;
 
 	/**
-	 * The subdirectory name where images from this transformer are stored
+	 * The file extension, used as the subdirectory name where images from this transformer are stored
 	 * E.g. /images/<Folder>, or /images/thumbs/<Folder>
 	 *
 	 * @return string
 	 */
-	public static function getDirName(): string;
+	public static function getFileExtension(): string;
 
 	/**
 	 * The mime type of the transformed image

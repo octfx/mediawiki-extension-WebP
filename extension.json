@@ -35,8 +35,12 @@
 			"value": false
 		},
 		"WebPCompressionQuality": {
-			"description": "Compression Quality",
+			"description": "Compression Quality webp images",
 			"value": 75
+		},
+		"WebPCompressionQualityAvif": {
+			"description": "Compression Quality for avif images",
+			"value": 30
 		},
 		"WebPFilterStrength": {
 			"description": "Filter Strength",
@@ -55,6 +59,10 @@
 				1200,
 				1600
 			]
+		},
+		"WebPCWebPLocation": {
+			"description": "Location of the cwebp executable",
+			"value": "/usr/bin/cwebp"
 		},
 		"EnabledTransformers": {
 			"description": "List of enabled image transformers",

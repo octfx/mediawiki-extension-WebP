@@ -6,7 +6,7 @@
 	"homepage": "https://github.com/octfx/mediawiki-extension-WebP",
 	"license": "GPL-2.0+",
 	"require": {
-		"php": ">=7.3",
+		"php": ">=8.0",
 		"ext-imagick": "*",
 		"composer/installers": ">=1.0.1"
 	},

@@ -103,7 +103,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 	public function onPictureHtmlSupportBeforeProduceHtml( ThumbnailImage $thumbnail, array &$sources ): void {
 		// File does not exist or is external; Or Thumbhandler is active
 		if (
-			$thumbnail->getStoragePath() === false && $thumbnail->getFile()->getPath() === false ||
+			( $thumbnail->getStoragePath() === false && $thumbnail->getFile()->getPath() === false ) ||
 			$this->mainConfig->get( 'GenerateThumbnailOnParse' ) === false
 		) {
 			return;
@@ -117,7 +117,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 		}
 
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-			$dir = $transformer::getDirName();
+			$dir = $transformer::getFileExtension();
 
 			if ( $thumbnail->fileIsSource() ) {
 				$url = str_replace( '/images/', sprintf( '/images/%s/', $dir ), $transformer::changeExtension( $thumbnail->getUrl() ) );

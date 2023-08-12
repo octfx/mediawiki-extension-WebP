@@ -22,7 +22,6 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Transformer;
 
-use ConfigException;
 use Exception;
 use File;
 use FileRepo;
@@ -40,8 +39,7 @@ use TempFSFile;
 /**
  * Main class for transforming images into webp files
  */
-class WebPTransformer implements MediaTransformer {
-
+class WebPTransformer extends AbstractBaseTransformer implements MediaTransformer {
 	/**
 	 * Supported files
 	 *
@@ -56,18 +54,11 @@ class WebPTransformer implements MediaTransformer {
 	];
 
 	/**
-	 * @var File
-	 */
-	private $file;
-
-	/**
 	 * @var array
 	 */
 	private $options;
 
 	public function __construct( File $file, array $options = [] ) {
-		$this->checkImagickInstalled();
-
 		if ( !self::canTransform( $file ) ) {
 			throw new RuntimeException(
 				sprintf(
@@ -80,6 +71,7 @@ class WebPTransformer implements MediaTransformer {
 
 		$this->file = $file;
 		$this->options = $options;
+		$this->config = MediaWikiServices::getInstance()->getMainConfig();
 	}
 
 	/**
@@ -91,7 +83,7 @@ class WebPTransformer implements MediaTransformer {
 	 * @throws ImagickException
 	 */
 	public function transformLikeThumb( int $width ): Status {
-		$tempFile = $this->getTempFile();
+		$tempFile = $this->getTempFile( self::getFileExtension() );
 
 		$out = $this->file->getThumbRel(
 			sprintf(
@@ -101,7 +93,7 @@ class WebPTransformer implements MediaTransformer {
 			)
 		);
 
-		$out = sprintf( '%s/%s', self::getDirName(), $out );
+		$out = sprintf( '%s/%s', self::getFileExtension(), $out );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
@@ -135,10 +127,10 @@ class WebPTransformer implements MediaTransformer {
 	 * @throws ImagickException
 	 */
 	public function transform(): Status {
-		$tempFile = $this->getTempFile();
+		$tempFile = $this->getTempFile( self::getFileExtension() );
 
 		$out = self::changeExtension( $this->file->getRel() );
-		$out = sprintf( '%s/%s', self::getDirName(), $out );
+		$out = sprintf( '%s/%s', self::getFileExtension(), $out );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
 
@@ -174,7 +166,7 @@ class WebPTransformer implements MediaTransformer {
 	 * @return string
 	 */
 	public static function changeExtension( string $path ): string {
-		return sprintf( '%s.webp', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ) );
+		return sprintf( '%s.%s', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ), self::getFileExtension() );
 	}
 
 	/**
@@ -182,7 +174,7 @@ class WebPTransformer implements MediaTransformer {
 	 * @return bool
 	 */
 	public static function canTransform( File $file ): bool {
-		return in_array( $file->getMimeType(), self::$supportedMimes );
+		return in_array( $file->getMimeType(), self::$supportedMimes ) && self::checkExtensionsLoaded();
 	}
 
 	/**
@@ -190,10 +182,10 @@ class WebPTransformer implements MediaTransformer {
 	 *
 	 * @throws RuntimeException
 	 */
-	private function checkImagickInstalled(): void {
-		if ( !extension_loaded( 'imagick' ) && !extension_loaded( 'gd' ) ) {
-			throw new RuntimeException( 'Extension:WebP requires Imagick or GD' );
-		}
+	private static function checkExtensionsLoaded(): bool {
+		return ( extension_loaded( 'imagick' ) && !empty( Imagick::queryformats( 'WebP' ) ) ) ||
+			( extension_loaded( 'gd' ) && ( gd_info()['WebP Support'] ?? false ) === true ) ||
+			( !Shell::isDisabled() && is_executable( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPCWebPLocation' ) ) );
 	}
 
 	/**
@@ -237,7 +229,7 @@ class WebPTransformer implements MediaTransformer {
 	 * @return bool
 	 */
 	private function transformCwebp( string $outPath, int $width = -1 ): bool {
-		if ( Shell::isDisabled() ) {
+		if ( Shell::isDisabled() || !is_executable( $this->getConfigValue( 'WebPCWebPLocation' ) ) ) {
 			return false;
 		}
 
@@ -253,7 +245,7 @@ class WebPTransformer implements MediaTransformer {
 
 		$command->unsafeParams(
 			[
-				'cwebp',
+				$this->getConfigValue( 'WebPCWebPLocation' ),
 				'-quiet',
 				$resize,
 				sprintf( '-q %d', $this->getConfigValue( 'WebPCompressionQuality' ) ),
@@ -288,7 +280,7 @@ class WebPTransformer implements MediaTransformer {
 	 * @throws ImagickException
 	 */
 	private function transformImagick( string $outPath, int $width = -1 ): bool {
-		if ( !extension_loaded( 'imagick' ) ) {
+		if ( !extension_loaded( 'imagick' ) || empty( Imagick::queryformats( 'WebP' ) ) ) {
 			return false;
 		}
 
@@ -309,13 +301,7 @@ class WebPTransformer implements MediaTransformer {
 		$image->setOption( 'webp:auto-filter', $this->getConfigValue( 'WebPAutoFilter' ) ? 'true' : 'false' );
 		$image->setOption( 'webp:alpha-quality', (string)$this->getConfigValue( 'WebPFilterStrength' ) );
 
-		$profiles = $image->getImageProfiles( 'icc', true );
-
-		$image->stripImage();
-
-		if ( !empty( $profiles ) ) {
-			$image->profileImage( 'icc', $profiles['icc'] );
-		}
+		$this->imagickStripImage( $image );
 
 		if ( $width > 0 ) {
 			$image->resizeImage( $width, 0, Imagick::FILTER_CATROM, 1 );
@@ -336,54 +322,22 @@ class WebPTransformer implements MediaTransformer {
 	 * @return bool
 	 */
 	private function transformGD( string $outPath, int $width = -1 ): bool {
-		if ( !extension_loaded( 'gd' ) ) {
+		if ( !extension_loaded( 'gd' ) || ( gd_info()['WebP Support'] ?? false ) === false ) {
 			return false;
 		}
 
-		switch ( $this->file->getMimeType() ) {
-			case 'image/jpg':
-			case 'image/jpeg':
-				$image = imagecreatefromjpeg( $this->file->getLocalRefPath() );
-				break;
+		$image = $this->createGDImage( $this->file );
 
-			case 'image/png':
-				$image = imagecreatefrompng( $this->file->getLocalRefPath() );
-				break;
-
-			case 'image/gif':
-				$image = imagecreatefromgif( $this->file->getLocalRefPath() );
-				break;
-
-			case 'image/webp':
-				$image = imagecreatefromwebp( $this->file->getLocalRefPath() );
-				break;
-
-			default:
-				return false;
+		if ( $image === false ) {
+			return false;
 		}
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting GD transform.', 'WebPTransformer', __FUNCTION__ ) );
 
-		imagepalettetotruecolor( $image );
-		imagesavealpha( $image, true );
-
-		$transparency = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
-		imagefill( $image, 0, 0, $transparency );
+		$this->gdImageTransparentBackground( $image );
 
 		if ( $width > 0 ) {
-			$originalWidth = imagesx( $image );
-			$originalHeight = imagesy( $image );
-			$aspectRatio = $originalWidth / $originalHeight;
-
-			$height = (int)( $width / $aspectRatio );
-
-			$out = imagecreatetruecolor( $width, $height );
-			imagepalettetotruecolor( $out );
-			imagesavealpha( $out, true );
-
-			imagefill( $out, 0, 0, $transparency );
-
-			imagecopyresampled( $out, $image, 0, 0, 0, 0, $width, $height, $originalWidth, $originalHeight );
+			$image = $this->gdImageResize( $image, $width );
 		}
 
 		$gdResult = imagewebp( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
@@ -405,66 +359,9 @@ class WebPTransformer implements MediaTransformer {
 	}
 
 	/**
-	 * Get a temp file for storing transformations
-	 *
-	 * @return TempFSFile
-	 */
-	private function getTempFile(): TempFSFile {
-		$tempFSFile = MediaWikiServices::getInstance()->getTempFSFileFactory()->newTempFSFile( 'transform_', 'webp' );
-
-		if ( $tempFSFile === null ) {
-			throw new RuntimeException( 'Could not get a new temp file' );
-		}
-
-		return $tempFSFile;
-	}
-
-	/**
-	 * Check if a given file exists at a given zone
-	 *
-	 * @param string $path
-	 * @param string $zone
-	 *
-	 * @return bool
-	 */
-	private function checkFileExists( string $path, string $zone ): bool {
-		$root = $this->file->getRepo()->getZonePath( $zone );
-
-		return MediaWikiServices::getInstance()
-			->getRepoGroup()
-			->getLocalRepo()
-			->fileExists( "$root/$path" ) ?? false;
-	}
-
-	/**
-	 * Loads a config value for a given key from the main config
-	 * Returns null on if an ConfigException was thrown
-	 *
-	 * @param string $key The config key
-	 *
-	 * @return mixed|null
-	 */
-	private function getConfigValue( string $key ) {
-		try {
-			$value = MediaWikiServices::getInstance()->getMainConfig()->get( $key );
-		} catch ( ConfigException $e ) {
-			wfLogWarning(
-				sprintf(
-					'Could not get config for "$wg%s". %s',
-					$key,
-					$e->getMessage()
-				)
-			);
-			$value = null;
-		}
-
-		return $value;
-	}
-
-	/**
 	 * @inheritDoc
 	 */
-	public static function getDirName(): string {
+	public static function getFileExtension(): string {
 		return 'webp';
 	}
 

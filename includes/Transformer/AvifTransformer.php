@@ -22,7 +22,6 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Transformer;
 
-use ConfigException;
 use File;
 use FileRepo;
 use Imagick;
@@ -36,8 +35,7 @@ use TempFSFile;
 /**
  * Main class for transforming images into webp files
  */
-class AvifTransformer implements MediaTransformer {
-
+class AvifTransformer extends AbstractBaseTransformer implements MediaTransformer {
 	/**
 	 * Supported files
 	 *
@@ -52,18 +50,11 @@ class AvifTransformer implements MediaTransformer {
 	];
 
 	/**
-	 * @var File
-	 */
-	private $file;
-
-	/**
 	 * @var array
 	 */
 	private $options;
 
 	public function __construct( File $file, array $options = [] ) {
-		$this->checkImagickInstalled();
-
 		if ( !self::canTransform( $file ) ) {
 			throw new RuntimeException(
 				sprintf(
@@ -76,6 +67,7 @@ class AvifTransformer implements MediaTransformer {
 
 		$this->file = $file;
 		$this->options = $options;
+		$this->config = MediaWikiServices::getInstance()->getMainConfig();
 	}
 
 	/**
@@ -87,7 +79,7 @@ class AvifTransformer implements MediaTransformer {
 	 * @throws ImagickException
 	 */
 	public function transformLikeThumb( int $width ): Status {
-		$tempFile = $this->getTempFile();
+		$tempFile = $this->getTempFile( self::getFileExtension() );
 
 		$out = $this->file->getThumbRel(
 			sprintf(
@@ -97,7 +89,7 @@ class AvifTransformer implements MediaTransformer {
 			)
 		);
 
-		$out = sprintf( '%s/%s', self::getDirName(), $out );
+		$out = sprintf( '%s/%s', self::getFileExtension(), $out );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'AvifTransformer', __FUNCTION__, $out ) );
 
@@ -131,10 +123,10 @@ class AvifTransformer implements MediaTransformer {
 	 * @throws ImagickException
 	 */
 	public function transform(): Status {
-		$tempFile = $this->getTempFile();
+		$tempFile = $this->getTempFile( self::getFileExtension() );
 
 		$out = self::changeExtension( $this->file->getRel() );
-		$out = sprintf( '%s/%s', self::getDirName(), $out );
+		$out = sprintf( '%s/%s', self::getFileExtension(), $out );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'AvifTransformer', __FUNCTION__, $out ) );
 
@@ -178,9 +170,7 @@ class AvifTransformer implements MediaTransformer {
 	 * @return bool
 	 */
 	public static function canTransform( File $file ): bool {
-		return in_array( $file->getMimeType(), self::$supportedMimes ) &&
-			extension_loaded( 'imagick' ) &&
-			!empty( Imagick::queryformats( 'AVIF' ) );
+		return in_array( $file->getMimeType(), self::$supportedMimes ) && self::checkExtensionsLoaded();
 	}
 
 	/**
@@ -188,10 +178,9 @@ class AvifTransformer implements MediaTransformer {
 	 *
 	 * @throws RuntimeException
 	 */
-	private function checkImagickInstalled(): void {
-		if ( !extension_loaded( 'imagick' ) ) {
-			throw new RuntimeException( 'Extension:WebP (AVIF) requires Imagick' );
-		}
+	private static function checkExtensionsLoaded(): bool {
+		return ( ( extension_loaded( 'imagick' ) && !empty( Imagick::queryformats( 'AVIF' ) ) ) ||
+			( extension_loaded( 'gd' ) && ( gd_info()['AVIF Support'] ?? false ) === true ) );
 	}
 
 	/**
@@ -247,17 +236,11 @@ class AvifTransformer implements MediaTransformer {
 		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
 		$image->setCompression( Imagick::COMPRESSION_BZIP );
 
-		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
-		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
+		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQualityAvif' ) );
+		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQualityAvif' ) );
 		$image->setImageFormat( 'avif' );
 
-		$profiles = $image->getImageProfiles( 'icc' );
-
-		$image->stripImage();
-
-		if ( !empty( $profiles ) ) {
-			$image->profileImage( 'icc', $profiles['icc'] );
-		}
+		$this->imagickStripImage( $image );
 
 		if ( $width > 0 ) {
 			$image->resizeImage( $width, 0, Imagick::FILTER_CATROM, 1 );
@@ -282,53 +265,21 @@ class AvifTransformer implements MediaTransformer {
 			return false;
 		}
 
-		switch ( $this->file->getMimeType() ) {
-			case 'image/jpg':
-			case 'image/jpeg':
-				$image = imagecreatefromjpeg( $this->file->getLocalRefPath() );
-				break;
+		$image = $this->createGDImage( $this->file );
 
-			case 'image/png':
-				$image = imagecreatefrompng( $this->file->getLocalRefPath() );
-				break;
-
-			case 'image/gif':
-				$image = imagecreatefromgif( $this->file->getLocalRefPath() );
-				break;
-
-			case 'image/webp':
-				$image = imagecreatefromwebp( $this->file->getLocalRefPath() );
-				break;
-
-			default:
-				return false;
+		if ( $image === false ) {
+			return false;
 		}
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting GD transform.', 'AvifTransformer', __FUNCTION__ ) );
 
-		imagepalettetotruecolor( $image );
-		imagesavealpha( $image, true );
-
-		$transparency = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
-		imagefill( $image, 0, 0, $transparency );
+		$this->gdImageTransparentBackground( $image );
 
 		if ( $width > 0 ) {
-			$originalWidth = imagesx( $image );
-			$originalHeight = imagesy( $image );
-			$aspectRatio = $originalWidth / $originalHeight;
-
-			$height = (int)( $width / $aspectRatio );
-
-			$out = imagecreatetruecolor( $width, $height );
-			imagepalettetotruecolor( $out );
-			imagesavealpha( $out, true );
-
-			imagefill( $out, 0, 0, $transparency );
-
-			imagecopyresampled( $out, $image, 0, 0, 0, 0, $width, $height, $originalWidth, $originalHeight );
+			$image = $this->gdImageResize( $image, $width );
 		}
 
-		$gdResult = imageavif( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
+		$gdResult = imageavif( $image, $outPath, $this->getConfigValue( 'WebPCompressionQualityAvif' ) );
 
 		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult ) );
 
@@ -347,66 +298,9 @@ class AvifTransformer implements MediaTransformer {
 	}
 
 	/**
-	 * Get a temp file for storing transformations
-	 *
-	 * @return TempFSFile
-	 */
-	private function getTempFile(): TempFSFile {
-		$tempFSFile = MediaWikiServices::getInstance()->getTempFSFileFactory()->newTempFSFile( 'transform_', 'avif' );
-
-		if ( $tempFSFile === null ) {
-			throw new RuntimeException( 'Could not get a new temp file' );
-		}
-
-		return $tempFSFile;
-	}
-
-	/**
-	 * Check if a given file exists at a given zone
-	 *
-	 * @param string $path
-	 * @param string $zone
-	 *
-	 * @return bool
-	 */
-	private function checkFileExists( string $path, string $zone ): bool {
-		$root = $this->file->getRepo()->getZonePath( $zone );
-
-		return MediaWikiServices::getInstance()
-			->getRepoGroup()
-			->getLocalRepo()
-			->fileExists( "$root/$path" ) ?? false;
-	}
-
-	/**
-	 * Loads a config value for a given key from the main config
-	 * Returns null on if an ConfigException was thrown
-	 *
-	 * @param string $key The config key
-	 *
-	 * @return mixed|null
-	 */
-	private function getConfigValue( string $key ) {
-		try {
-			$value = MediaWikiServices::getInstance()->getMainConfig()->get( $key );
-		} catch ( ConfigException $e ) {
-			wfLogWarning(
-				sprintf(
-					'Could not get config for "$wg%s". %s',
-					$key,
-					$e->getMessage()
-				)
-			);
-			$value = null;
-		}
-
-		return $value;
-	}
-
-	/**
 	 * @inheritDoc
 	 */
-	public static function getDirName(): string {
+	public static function getFileExtension(): string {
 		return 'avif';
 	}
 
