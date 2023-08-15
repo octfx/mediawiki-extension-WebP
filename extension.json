@@ -12,6 +12,9 @@
 		"MediaWiki": ">= 1.39.0",
 		"extensions": {
 			"PictureHtmlSupport": "*"
+		},
+		"platform": {
+			"php": ">=8.0"
 		}
 	},
 	"AutoloadNamespaces": {
