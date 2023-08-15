@@ -24,6 +24,7 @@ namespace MediaWiki\Extension\WebP\Hooks;
 
 use Config;
 use FileBackendError;
+use IForeignRepoWithMWApi;
 use JobQueueGroup;
 use MediaWiki\Extension\PictureHtmlSupport\Hook\PictureHtmlSupportBeforeProduceHtml;
 use MediaWiki\Extension\WebP\TransformImageJob;
@@ -105,7 +106,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 		if (
 			$thumbnail->getStoragePath() === false ||
 			$this->mainConfig->get( 'GenerateThumbnailOnParse' ) === false ||
-			( is_string( $thumbnail->getUrl() ) && str_contains( $thumbnail->getUrl(), 'http' ) ) ||
+			( $thumbnail->getFile()->getRepo() instanceof IForeignRepoWithMWApi ) ||
 			( $thumbnail->fileIsSource() && $thumbnail->getFile()->getPath() === false )
 		) {
 			return;
