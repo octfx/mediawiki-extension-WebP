@@ -117,6 +117,7 @@ abstract class AbstractBaseTransformer {
 	 */
 	protected function gdImageTransparentBackground( GdImage $image ): void {
 		imagepalettetotruecolor( $image );
+		imagealphablending( $image, true );
 		imagesavealpha( $image, true );
 
 		$transparency = imagecolorallocatealpha( $image, 0, 0, 0, 127 );

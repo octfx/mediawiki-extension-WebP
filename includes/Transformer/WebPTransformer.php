@@ -291,7 +291,7 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
 
 		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
-		$image->setCompression( Imagick::COMPRESSION_BZIP );
+		$image->setCompression( Imagick::COMPRESSION_JPEG );
 
 		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );
 		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQuality' ) );

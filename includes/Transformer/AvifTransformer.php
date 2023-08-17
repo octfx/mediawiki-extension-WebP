@@ -234,7 +234,7 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 		$image->setImageBackgroundColor( new ImagickPixel( 'transparent' ) );
 
 		$image = $image->mergeImageLayers( Imagick::LAYERMETHOD_MERGE );
-		$image->setCompression( Imagick::COMPRESSION_BZIP );
+		$image->setCompression( Imagick::COMPRESSION_UNDEFINED );
 
 		$image->setCompressionQuality( $this->getConfigValue( 'WebPCompressionQualityAvif' ) );
 		$image->setImageCompressionQuality( $this->getConfigValue( 'WebPCompressionQualityAvif' ) );
