@@ -71,8 +71,18 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$repo = $this->repoGroup->getLocalRepo();
 
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-			$oldPath = sprintf( '%s/%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName(), $file->getHashPath() );
-			$oldThumbPath = sprintf( '%s/%s/%s', $repo->getZonePath( 'thumb' ), $transformer::getDirName(), $file->getHashPath() );
+			$oldPath = sprintf(
+				'%s/%s/%s',
+				$repo->getZonePath( 'public' ),
+				$transformer::getDirName(),
+				$file->getHashPath()
+			);
+			$oldThumbPath = sprintf(
+				'%s/%s/%s',
+				$repo->getZonePath( 'thumb' ),
+				$transformer::getDirName(),
+				$file->getHashPath()
+			);
 
 			$oldThumbs = $repo->getBackend()->getFileList( [
 				'dir' => $oldThumbPath
@@ -84,9 +94,21 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 
 			$repo->quickPurge( sprintf( '%s/%s', $oldPath, $transformer::changeExtension( $file->getName() ) ) );
 
-			$repo->quickCleanDir( sprintf( '%s/%s', $oldThumbPath, ltrim( $file->getName(), '/' ) ) );
-			$repo->quickCleanDir( sprintf( '%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName() ) );
-			$repo->quickCleanDir( sprintf( '%s/%s', $repo->getZonePath( 'thumb' ), $transformer::getDirName() ) );
+			$repo->quickCleanDir( sprintf(
+				'%s/%s',
+				$oldThumbPath,
+				ltrim( $file->getName(), '/' )
+			) );
+			$repo->quickCleanDir( sprintf(
+				'%s/%s',
+				$repo->getZonePath( 'public' ),
+				$transformer::getDirName()
+			) );
+			$repo->quickCleanDir( sprintf(
+				'%s/%s',
+				$repo->getZonePath( 'thumb' ),
+				$transformer::getDirName()
+			) );
 		}
 	}
 
@@ -145,8 +167,18 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
 			$path = sprintf( '%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName() );
 
-			$oldPath = sprintf( '%s/%s%s', $path, $oldFile->getHashPath(), $transformer::changeExtension( $oldFile->getName() ) );
-			$newPath = sprintf( '%s/%s%s', $path, $newFile->getHashPath(), $transformer::changeExtension( $newFile->getName() ) );
+			$oldPath = sprintf(
+				'%s/%s%s',
+				$path,
+				$oldFile->getHashPath(),
+				$transformer::changeExtension( $oldFile->getName() )
+			);
+			$newPath = sprintf(
+				'%s/%s%s',
+				$path,
+				$newFile->getHashPath(),
+				$transformer::changeExtension( $newFile->getName() )
+			);
 
 			$repo->getBackend()->prepare( [
 				'dir' => $this->getDirPath( $newPath )
@@ -175,6 +207,10 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		);
 	}
 
+	/**
+	 * @param string $filePath
+	 * @return string
+	 */
 	private function getDirPath( string $filePath ): string {
 		$path = explode( '/', $filePath );
 		array_pop( $path );
@@ -182,6 +218,11 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		return implode( '/', $path );
 	}
 
+	/**
+	 * @param LocalFile $oldFile
+	 * @param LocalFile $newFile
+	 * @return void
+	 */
 	private function moveThumbs( LocalFile $oldFile, LocalFile $newFile ): void {
 		$repo = $this->repoGroup->getLocalRepo();
 		$path = $repo->getZonePath( 'thumb' );

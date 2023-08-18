@@ -83,7 +83,8 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 				}
 			}
 		} catch ( FileBackendError $e ) {
-		} // suppress (T56674)
+			// suppress (T56674)
+		}
 
 		$purgeList = [];
 		foreach ( $files as $thumbFile ) {
@@ -98,7 +99,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 	 * Add webp versions to the page output
 	 *
 	 * @param ThumbnailImage $thumbnail
-	 * @param array $sources
+	 * @param array &$sources
 	 * @return void
 	 */
 	public function onPictureHtmlSupportBeforeProduceHtml( ThumbnailImage $thumbnail, array &$sources ): void {
@@ -123,14 +124,22 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 			$dir = $transformer::getFileExtension();
 
 			if ( $thumbnail->fileIsSource() ) {
-				$url = str_replace( '/images/', sprintf( '/images/%s/', $dir ), $transformer::changeExtension( $thumbnail->getUrl() ) );
+				$url = str_replace(
+					'/images/',
+					sprintf( '/images/%s/', $dir ),
+					$transformer::changeExtension( $thumbnail->getUrl() )
+				);
 
 				$path = $repo->getZonePath( 'public' );
 
 				$filePath = explode( $hash, $thumbnail->getFile()->getPath() );
 				$filePath = array_pop( $filePath );
 			} else {
-				$url = str_replace( '/images/thumb/', sprintf( '/images/thumb/%s/', $dir ), $transformer::changeExtension( $thumbnail->getUrl() ) );
+				$url = str_replace(
+					'/images/thumb/',
+					sprintf( '/images/thumb/%s/', $dir ),
+					$transformer::changeExtension( $thumbnail->getUrl() )
+				);
 
 				$path = $repo->getZonePath( 'thumb' );
 

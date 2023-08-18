@@ -12,10 +12,18 @@ use MediaWiki\MediaWikiServices;
 use RuntimeException;
 use TempFSFile;
 
+/**
+ * Base Transformer Class
+ */
 abstract class AbstractBaseTransformer {
-
+	/**
+	 * @var File
+	 */
 	protected File $file;
 
+	/**
+	 * @var Config
+	 */
 	protected Config $config;
 
 	/**
@@ -25,7 +33,9 @@ abstract class AbstractBaseTransformer {
 	 * @return TempFSFile
 	 */
 	protected function getTempFile( string $fileExtension ): TempFSFile {
-		$tempFSFile = MediaWikiServices::getInstance()->getTempFSFileFactory()->newTempFSFile( 'transform_', $fileExtension );
+		$tempFSFile = MediaWikiServices::getInstance()
+			->getTempFSFileFactory()
+			->newTempFSFile( 'transform_', $fileExtension );
 
 		if ( $tempFSFile === null ) {
 			throw new RuntimeException( 'Could not get a new temp file' );
@@ -141,7 +151,18 @@ abstract class AbstractBaseTransformer {
 		$out = imagecreatetruecolor( $width, $height );
 		$this->gdImageTransparentBackground( $out );
 
-		imagecopyresampled( $out, $image, 0, 0, 0, 0, $width, $height, $originalWidth, $originalHeight );
+		imagecopyresampled(
+			$out,
+			$image,
+			0,
+			0,
+			0,
+			0,
+			$width,
+			$height,
+			$originalWidth,
+			$originalHeight
+		);
 
 		return $out;
 	}

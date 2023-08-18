@@ -32,9 +32,12 @@ use Title;
  * Creates webp images through the JobQueue
  */
 class TransformImageJob extends Job {
-	protected $removeDuplicates = true;
-
+	/**
+	 * @param Title|null $title
+	 * @param array $params
+	 */
 	public function __construct( ?Title $title, array $params ) {
+		$this->removeDuplicates = true;
 		parent::__construct( 'TransformImage', $params );
 	}
 
@@ -50,7 +53,15 @@ class TransformImageJob extends Job {
 			return false;
 		}
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Running transform job for transformer %s', 'TransformImageJob', __FUNCTION__, $this->params['transformer'] ) );
+		wfDebugLog(
+			'WebP',
+			sprintf(
+				'[%s::%s] Running transform job for transformer %s',
+				'TransformImageJob',
+				__FUNCTION__,
+				$this->params['transformer']
+			)
+		);
 
 		$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $this->params['title'] );
 
@@ -65,7 +76,10 @@ class TransformImageJob extends Job {
 		}
 
 		try {
-			$transformer = new $this->params['transformer']( $file, [ 'overwrite' => $this->params['overwrite'] ?? false ] );
+			$transformer = new $this->params['transformer'](
+				$file,
+				[ 'overwrite' => $this->params['overwrite'] ?? false ]
+			);
 		} catch ( RuntimeException $e ) {
 			$this->setLastError( $e->getMessage() );
 			return false;
@@ -88,7 +102,10 @@ class TransformImageJob extends Job {
 			return false;
 		}
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform success', 'TransformImageJob', __FUNCTION__ ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Transform success', 'TransformImageJob', __FUNCTION__ )
+		);
 
 		return true;
 	}

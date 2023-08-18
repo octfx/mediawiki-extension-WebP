@@ -30,8 +30,10 @@ use MediaWiki\Extension\WebP\Transformer\WebPTransformer;
 use MediaWiki\Extension\WebP\TransformImageJob;
 use MediaWiki\Hook\FileUndeleteCompleteHook;
 use MediaWiki\Hook\UploadCompleteHook;
+use MediaWiki\Title\Title;
 use RuntimeException;
 use UploadBase;
+use User;
 
 class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 
@@ -116,10 +118,10 @@ class MainHooks implements UploadCompleteHook, FileUndeleteCompleteHook {
 	/**
 	 * Create webp files after un-deletion
 	 *
-	 * @param $title
-	 * @param $fileVersions
-	 * @param $user
-	 * @param $reason
+	 * @param Title $title
+	 * @param array $fileVersions
+	 * @param User $user
+	 * @param string $reason
 	 * @return void
 	 */
 	public function onFileUndeleteComplete( $title, $fileVersions, $user, $reason ): void {

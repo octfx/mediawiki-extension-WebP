@@ -38,6 +38,7 @@ use TempFSFile;
 
 /**
  * Main class for transforming images into webp files
+ * @phpcs:disable Generic.ControlStructures.DisallowYodaConditions.Found
  */
 class WebPTransformer extends AbstractBaseTransformer implements MediaTransformer {
 	/**
@@ -49,7 +50,8 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 		'image/jpeg',
 		'image/jpg',
 		'image/png',
-		'image/webp', // MW generates png/jpg thumbs for webp files
+		// MW generates png/jpg thumbs for webp files
+		'image/webp',
 		// 'image/gif',
 	];
 
@@ -58,6 +60,10 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 	 */
 	private $options;
 
+	/**
+	 * @param File $file
+	 * @param array $options
+	 */
 	public function __construct( File $file, array $options = [] ) {
 		if ( !self::canTransform( $file ) ) {
 			throw new RuntimeException(
@@ -132,10 +138,16 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 		$out = self::changeExtension( $this->file->getRel() );
 		$out = sprintf( '%s/%s', self::getFileExtension(), $out );
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Out path is: %s', 'WebPTransformer', __FUNCTION__, $out )
+		);
 
 		if ( $this->checkFileExists( $out, 'public' ) && !$this->shouldOverwrite() ) {
-			wfDebugLog( 'WebP', sprintf( '[%s::%s] File exists, skipping transform', 'WebPTransformer', __FUNCTION__ ) );
+			wfDebugLog(
+				'WebP',
+				sprintf( '[%s::%s] File exists, skipping transform', 'WebPTransformer', __FUNCTION__ )
+			);
 
 			return Status::newGood();
 		}
@@ -166,7 +178,11 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 	 * @return string
 	 */
 	public static function changeExtension( string $path ): string {
-		return sprintf( '%s.%s', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ), self::getFileExtension() );
+		return sprintf(
+			'%s.%s',
+			trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ),
+			self::getFileExtension()
+		);
 	}
 
 	/**
@@ -180,12 +196,16 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 	/**
 	 * Check if Imagick is installed
 	 *
+	 * @return bool
 	 * @throws RuntimeException
 	 */
 	private static function checkExtensionsLoaded(): bool {
 		return ( extension_loaded( 'imagick' ) && !empty( Imagick::queryformats( 'WebP' ) ) ) ||
 			( extension_loaded( 'gd' ) && ( gd_info()['WebP Support'] ?? false ) === true ) ||
-			( !Shell::isDisabled() && is_executable( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPCWebPLocation' ) ) );
+			(
+				!Shell::isDisabled() &&
+				is_executable( MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPCWebPLocation' ) )
+			);
 	}
 
 	/**
@@ -233,7 +253,10 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 			return false;
 		}
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting cwebp transform.', 'WebPTransformer', __FUNCTION__ ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Starting cwebp transform.', 'WebPTransformer', __FUNCTION__ )
+		);
 
 		$command = MediaWikiServices::getInstance()->getShellCommandFactory()->create();
 
@@ -264,7 +287,14 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 			return false;
 		}
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $result->getExitCode() ) );
+		wfDebugLog(
+			'WebP',
+			sprintf(
+				'[%s::%s] Transform status is %d', 'WebPTransformer',
+				__FUNCTION__,
+				$result->getExitCode()
+			)
+		);
 
 		return $result->getExitCode() === 0;
 	}
@@ -284,7 +314,10 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 			return false;
 		}
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting Imagick transform.', 'WebPTransformer', __FUNCTION__ ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Starting Imagick transform.', 'WebPTransformer', __FUNCTION__ )
+		);
 
 		$image = new Imagick( $this->file->getLocalRefPath() );
 
@@ -309,7 +342,10 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 
 		$imagickResult = $image->writeImages( sprintf( 'webp:%s', $outPath ), true );
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $imagickResult ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $imagickResult )
+		);
 
 		return $imagickResult;
 	}
@@ -332,7 +368,10 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 			return false;
 		}
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting GD transform.', 'WebPTransformer', __FUNCTION__ ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Starting GD transform.', 'WebPTransformer', __FUNCTION__ )
+		);
 
 		$this->gdImageTransparentBackground( $image );
 
@@ -342,7 +381,10 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 
 		$gdResult = imagewebp( $image, $outPath, $this->getConfigValue( 'WebPCompressionQuality' ) );
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult )
+		);
 
 		return $gdResult;
 	}
@@ -354,7 +396,13 @@ class WebPTransformer extends AbstractBaseTransformer implements MediaTransforme
 	 */
 	private function logStatus( Status $status ): void {
 		if ( !$status->isOK() && $status->getMessage()->getKey() !== 'backend-fail-alreadyexists' ) {
-			wfLogWarning( sprintf( 'Extension:WebP could not write image "%s". Message: %s', $this->file->getName(), $status->getMessage() ) );
+			wfLogWarning(
+				sprintf(
+					'Extension:WebP could not write image "%s". Message: %s',
+					$this->file->getName(),
+					$status->getMessage()
+				)
+			);
 		}
 	}
 

@@ -34,6 +34,7 @@ use TempFSFile;
 
 /**
  * Main class for transforming images into webp files
+ * @phpcs:disable Generic.ControlStructures.DisallowYodaConditions.Found
  */
 class AvifTransformer extends AbstractBaseTransformer implements MediaTransformer {
 	/**
@@ -54,6 +55,10 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 	 */
 	private $options;
 
+	/**
+	 * @param File $file
+	 * @param array $options
+	 */
 	public function __construct( File $file, array $options = [] ) {
 		if ( !self::canTransform( $file ) ) {
 			throw new RuntimeException(
@@ -91,7 +96,10 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 
 		$out = sprintf( '%s/%s', self::getFileExtension(), $out );
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'AvifTransformer', __FUNCTION__, $out ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Out path is: %s', 'AvifTransformer', __FUNCTION__, $out )
+		);
 
 		if ( $this->checkFileExists( $out, 'thumb' ) && !$this->shouldOverwrite() ) {
 			return Status::newGood();
@@ -128,10 +136,16 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 		$out = self::changeExtension( $this->file->getRel() );
 		$out = sprintf( '%s/%s', self::getFileExtension(), $out );
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Out path is: %s', 'AvifTransformer', __FUNCTION__, $out ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Out path is: %s', 'AvifTransformer', __FUNCTION__, $out )
+		);
 
 		if ( $this->checkFileExists( $out, 'public' ) && !$this->shouldOverwrite() ) {
-			wfDebugLog( 'WebP', sprintf( '[%s::%s] File exists, skipping transform', 'AvifTransformer', __FUNCTION__ ) );
+			wfDebugLog(
+				'WebP',
+				sprintf( '[%s::%s] File exists, skipping transform', 'AvifTransformer', __FUNCTION__ )
+			);
 
 			return Status::newGood();
 		}
@@ -162,7 +176,10 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 	 * @return string
 	 */
 	public static function changeExtension( string $path ): string {
-		return sprintf( '%s.avif', trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ) );
+		return sprintf(
+			'%s.avif',
+			trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' )
+		);
 	}
 
 	/**
@@ -176,6 +193,7 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 	/**
 	 * Check if Imagick is installed
 	 *
+	 * @return bool
 	 * @throws RuntimeException
 	 */
 	private static function checkExtensionsLoaded(): bool {
@@ -271,7 +289,10 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 			return false;
 		}
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Starting GD transform.', 'AvifTransformer', __FUNCTION__ ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Starting GD transform.', 'AvifTransformer', __FUNCTION__ )
+		);
 
 		$this->gdImageTransparentBackground( $image );
 
@@ -281,7 +302,10 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 
 		$gdResult = imageavif( $image, $outPath, $this->getConfigValue( 'WebPCompressionQualityAvif' ) );
 
-		wfDebugLog( 'WebP', sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult ) );
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult )
+		);
 
 		return $gdResult;
 	}
@@ -293,7 +317,13 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 	 */
 	private function logStatus( Status $status ): void {
 		if ( !$status->isOK() && $status->getMessage()->getKey() !== 'backend-fail-alreadyexists' ) {
-			wfLogWarning( sprintf( 'Extension:WebP could not write image "%s". Message: %s', $this->file->getName(), $status->getMessage() ) );
+			wfLogWarning(
+				sprintf(
+					'Extension:WebP could not write image "%s". Message: %s',
+					$this->file->getName(),
+					$status->getMessage()
+				)
+			);
 		}
 	}
 

@@ -12,14 +12,23 @@ if ( $IP === false ) {
 require_once "$IP/maintenance/Maintenance.php";
 
 class CreateFromLocalFiles extends Maintenance {
+	/**
+	 *
+	 */
 	public function __construct() {
 		parent::__construct();
 
 		$this->addDescription( 'Creates transformed versions for each uploaded File.' );
 		$this->addOption( 'no-thumbs', 'Disable creation of thumbnails.' );
 		$this->addOption( 'only-thumbs', 'Only create thumbnails.' );
-		$this->addOption( 'thumb-sizes', 'Sizes of thumbs to generate. Provide a comma separated list of sizes like 1000,1200.' );
-		$this->addOption( 'titles', 'Work on these images instead of all. Provide a comma separated list of titles like Title1.jpg,Title2.jpg.' );
+		$this->addOption(
+			'thumb-sizes',
+			'Sizes of thumbs to generate. Provide a comma separated list of sizes like 1000,1200.'
+		);
+		$this->addOption(
+			'titles',
+			'Work on these images instead of all. Provide a comma separated list of titles like Title1.jpg,Title2.jpg.'
+		);
 		$this->addOption( 'overwrite', 'Overwrite files if they already exist.' );
 		$this->addOption( 'title-prefix', 'Page title prefix.' );
 		$this->addOption( 'file-type', 'File type to work on. Write file extension without dot.' );
@@ -28,6 +37,9 @@ class CreateFromLocalFiles extends Maintenance {
 		$this->requireExtension( 'WebP' );
 	}
 
+	/**
+	 * @return void
+	 */
 	public function execute() {
 		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getMaintenanceConnectionRef( DB_REPLICA );
 		$config = MediaWikiServices::getInstance()->getMainConfig();
@@ -98,6 +110,10 @@ class CreateFromLocalFiles extends Maintenance {
 		$group->push( $jobs );
 	}
 
+	/**
+	 * @param string $title
+	 * @return array
+	 */
 	private function makeThumbnailJobs( string $title ): array {
 		$config = MediaWikiServices::getInstance()->getMainConfig();
 

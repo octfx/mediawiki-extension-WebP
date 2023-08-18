@@ -10,6 +10,9 @@ if ( $IP === false ) {
 require_once "$IP/maintenance/Maintenance.php";
 
 class RemoveCreatedFiles extends Maintenance {
+	/**
+	 *
+	 */
 	public function __construct() {
 		parent::__construct();
 
@@ -22,6 +25,9 @@ class RemoveCreatedFiles extends Maintenance {
 		$this->requireExtension( 'WebP' );
 	}
 
+	/**
+	 * @return void
+	 */
 	public function execute() {
 		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
 		$config = MediaWikiServices::getInstance()->getMainConfig();
@@ -58,6 +64,12 @@ class RemoveCreatedFiles extends Maintenance {
 		}
 	}
 
+	/**
+	 * @param array $files
+	 * @param string $backend
+	 * @param bool $delete
+	 * @return void
+	 */
 	private function delete( $files, $backend, bool $delete = false ): void {
 		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
 
