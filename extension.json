@@ -67,6 +67,10 @@
 			"description": "Location of the cwebp executable",
 			"value": "/usr/bin/cwebp"
 		},
+		"WebPAvifencLocation": {
+			"description": "Location of the avifenc executable",
+			"value": "/usr/bin/avifenc"
+		},
 		"EnabledTransformers": {
 			"description": "List of enabled image transformers",
 			"value": []

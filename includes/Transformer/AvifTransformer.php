@@ -22,12 +22,16 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Transformer;
 
+use Exception;
 use File;
 use FileRepo;
 use Imagick;
 use ImagickException;
 use ImagickPixel;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\ProcOpenError;
+use MediaWiki\Shell\Shell;
+use MediaWiki\ShellDisabledError;
 use RuntimeException;
 use Status;
 use TempFSFile;
@@ -222,13 +226,87 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 			$outPath = $outPath->getPath();
 		}
 
-		$result = $this->transformImagick( $outPath, $width );
+		$avifencResult = $this->transformAvifenc( $outPath, $width );
 
-		if ( !$result ) {
-			$result = $this->transformGD( $outPath, $width );
+		if ( !$avifencResult ) {
+			$imagickResult = $this->transformImagick( $outPath, $width );
+
+			if ( !$imagickResult ) {
+				return $this->transformGD( $outPath, $width );
+			}
 		}
 
-		return $result;
+		return true;
+	}
+
+	/**
+	 * @param string $outPath
+	 * @param int $width
+	 *
+	 * @return bool
+	 * @throws ImagickException
+	 */
+	private function transformAvifenc( string $outPath, int $width = -1 ): bool {
+		if (
+			Shell::isDisabled() ||
+			!is_executable( $this->getConfigValue( 'WebPAvifencLocation' ) ) ||
+			// avifenc can't rescale images, so we need a preliminary step
+			( !extension_loaded( 'imagick' ) && $width > 0 )
+		) {
+			return false;
+		}
+
+		wfDebugLog(
+			'WebP',
+			sprintf( '[%s::%s] Starting avifenc transform.', 'AvifTransformer', __FUNCTION__ )
+		);
+
+		$tempFile = null;
+
+		if ( $width > 0 ) {
+			$tempFile = $this->getTempFile( $this->file->getExtension() );
+			$image = new Imagick( $this->file->getLocalRefPath() );
+			$image->resizeImage( $width, 0, Imagick::FILTER_CATROM, 1 );
+			$image->writeImages( $tempFile->getPath(), true );
+		}
+
+		$command = MediaWikiServices::getInstance()->getShellCommandFactory()->create();
+
+        // Based on https://github.com/spatie/image-optimizer
+		$command->unsafeParams(
+			[
+				$this->getConfigValue( 'WebPAvifencLocation' ),
+				'-a cq-level=23',
+				'-j all',
+				'--min 0',
+				'--max 63',
+				'--minalpha 0',
+				'--minalpha 63',
+				'-a end-usage=q',
+				'-a tune=ssim',
+				$width > 0 ? $tempFile->getPath() : $this->file->getLocalRefPath(),
+				$outPath,
+			]
+		);
+
+		try {
+			$result = $command->execute();
+		} catch ( ProcOpenError | ShellDisabledError | Exception $e ) {
+			wfLogWarning( $e->getMessage() );
+
+			return false;
+		}
+
+		wfDebugLog(
+			'WebP',
+			sprintf(
+				'[%s::%s] Transform status is %d', 'AvifTransformer',
+				__FUNCTION__,
+				$result->getExitCode()
+			)
+		);
+
+		return $result->getExitCode() === 0;
 	}
 
 	/**
@@ -304,7 +382,7 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 
 		wfDebugLog(
 			'WebP',
-			sprintf( '[%s::%s] Transform status is %d', 'WebPTransformer', __FUNCTION__, $gdResult )
+			sprintf( '[%s::%s] Transform status is %d', 'AvifTransformer', __FUNCTION__, $gdResult )
 		);
 
 		return $gdResult;

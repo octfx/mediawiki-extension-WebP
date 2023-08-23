@@ -60,9 +60,13 @@ wfLoadExtension( 'WebP' );
 | $wgWebPAutoFilter                  | Enables the auto filter.  This algorithm will spend additional time optimizing the filtering strength to reach a well-balanced quality.                                   | false                                                                                                                      | true                        |
 | $wgWebPThumbSizes                  | Thumbnail Sizes to create through the maintenance script                                                                                                                  | [2400]                                                                                                                     | [120, 320, 800, 1200, 1600] |
 | $wgEnabledTransformers             | List of enabled image transformers                                                                                                                                        | [ "MediaWiki\\Extension\\WebP\\Transformer\\AvifTransformer", "MediaWiki\\Extension\\WebP\\Transformer\\WebPTransformer" ] | WebP Transformer            |
+| $wgWebPCWebPLocation               | Path to `cwebp` executable                                                                                                                                                |                                                                                                                            | /usr/bin/cwebp              |
+| $wgWebPAvifencLocation             | Path to `avifenc` executable                                                                                                                                              |                                                                                                                            | /usr/bin/avifenc            |
 
 ### Enabling Avif
-For full feature support you'll need to install Imagick v7, als v6.9 has multiple bugs.
+For full feature support you'll need to install Imagick v7, als v6.9 has multiple bugs.  
+Alternatively you can install `libavif-bin` (>= 0.9.3) which provides `avifenc`. Do note that this still requires _a_ version of imagick installed, as avifenc can't rescale images.  
+
 When enabling the Avif transformer, make sure that it is ordered before the webp transformer, as else the browser will pick the webp version.
 
 ```php

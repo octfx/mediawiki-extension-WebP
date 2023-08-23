@@ -99,7 +99,7 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 	 * Add webp versions to the page output
 	 *
 	 * @param ThumbnailImage $thumbnail
-	 * @param array &$sources
+	 * @param array $sources
 	 * @return void
 	 */
 	public function onPictureHtmlSupportBeforeProduceHtml( ThumbnailImage $thumbnail, array &$sources ): void {
