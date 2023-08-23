@@ -272,7 +272,7 @@ class AvifTransformer extends AbstractBaseTransformer implements MediaTransforme
 
 		$command = MediaWikiServices::getInstance()->getShellCommandFactory()->create();
 
-        // Based on https://github.com/spatie/image-optimizer
+		// Based on https://github.com/spatie/image-optimizer
 		$command->unsafeParams(
 			[
 				$this->getConfigValue( 'WebPAvifencLocation' ),
