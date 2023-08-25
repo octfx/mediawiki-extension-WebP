@@ -102,6 +102,9 @@
 				"RepoGroup",
 				"JobQueueGroup"
 			]
+		},
+		"MediaWikiServices": {
+			"class": "MediaWiki\\Extension\\WebP\\Hooks\\MediaWikiServices"
 		}
 	},
 	"Hooks": {
@@ -110,7 +113,8 @@
 		"PageMoveComplete": "FileHooks",
 		"UploadComplete": "MainHooks",
 		"PictureHtmlSupportBeforeProduceHtml": "ThumbnailHooks",
-		"LocalFilePurgeThumbnails": "ThumbnailHooks"
+		"LocalFilePurgeThumbnails": "ThumbnailHooks",
+		"MediaWikiServices": "MediaWikiServices"
 	},
 	"MessagesDirs": {
 		"WebP": [

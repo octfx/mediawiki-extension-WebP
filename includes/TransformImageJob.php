@@ -23,6 +23,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\WebP;
 
 use Exception;
+use InvalidArgumentException;
 use Job;
 use MediaWiki\MediaWikiServices;
 use RuntimeException;
@@ -47,7 +48,7 @@ class TransformImageJob extends Job {
 	 * @return bool
 	 */
 	public function run(): bool {
-		if ( !is_array( $this->params ) || !isset( $this->params['transformer'] ) ) {
+		if ( !isset( $this->params['transformer'] ) ) {
 			$this->setLastError( 'Extension:WebP: Params is not an array.' );
 
 			return false;
@@ -76,11 +77,14 @@ class TransformImageJob extends Job {
 		}
 
 		try {
-			$transformer = new $this->params['transformer'](
-				$file,
-				[ 'overwrite' => $this->params['overwrite'] ?? false ]
+			$transformer = MediaWikiServices::getInstance()->getService( 'WebPTransformerFactory' )->getInstance(
+				$this->params['transformer'],
+				[
+					$file,
+					[ 'overwrite' => $this->params['overwrite'] ?? false ]
+				]
 			);
-		} catch ( RuntimeException $e ) {
+		} catch ( InvalidArgumentException | RuntimeException $e ) {
 			$this->setLastError( $e->getMessage() );
 			return false;
 		}

@@ -74,13 +74,13 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			$oldPath = sprintf(
 				'%s/%s/%s',
 				$repo->getZonePath( 'public' ),
-				$transformer::getDirName(),
+				$transformer::getFileExtension(),
 				$file->getHashPath()
 			);
 			$oldThumbPath = sprintf(
 				'%s/%s/%s',
 				$repo->getZonePath( 'thumb' ),
-				$transformer::getDirName(),
+				$transformer::getFileExtension(),
 				$file->getHashPath()
 			);
 
@@ -102,12 +102,12 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 			$repo->quickCleanDir( sprintf(
 				'%s/%s',
 				$repo->getZonePath( 'public' ),
-				$transformer::getDirName()
+				$transformer::getFileExtension()
 			) );
 			$repo->quickCleanDir( sprintf(
 				'%s/%s',
 				$repo->getZonePath( 'thumb' ),
-				$transformer::getDirName()
+				$transformer::getFileExtension()
 			) );
 		}
 	}
@@ -165,7 +165,7 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$newFile->load( File::READ_LATEST );
 
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-			$path = sprintf( '%s/%s', $repo->getZonePath( 'public' ), $transformer::getDirName() );
+			$path = sprintf( '%s/%s', $repo->getZonePath( 'public' ), $transformer::getFileExtension() );
 
 			$oldPath = sprintf(
 				'%s/%s%s',
@@ -228,8 +228,8 @@ class FileHooks implements FileTransformedHook, FileDeleteCompleteHook, PageMove
 		$path = $repo->getZonePath( 'thumb' );
 
 		foreach ( $this->mainConfig->get( 'EnabledTransformers' ) as $transformer ) {
-			$newPath = sprintf( '%s/%s/%s', $path, $transformer::getDirName(), $newFile->getHashPath() );
-			$oldPath = sprintf( '%s/%s/%s', $path, $transformer::getDirName(), $oldFile->getHashPath() );
+			$newPath = sprintf( '%s/%s/%s', $path, $transformer::getFileExtension(), $newFile->getHashPath() );
+			$oldPath = sprintf( '%s/%s/%s', $path, $transformer::getFileExtension(), $oldFile->getHashPath() );
 
 			$oldName = explode( '/', $oldFile->getPath() );
 			$oldName = array_pop( $oldName );
