@@ -33,6 +33,10 @@
 			"description": "Dispatch jobs for 1.5x and 2x file versions. Note: This runs for each thumbnail inclusion and may be disabled after all present thumbnails have been converted.",
 			"value": true
 		},
+		"WebPForceOverwriteInJobs": {
+			"description": "Dispatch jobs with 'overwrite' set to true. Alternatively this can be set to an array with the transformer class name mapping to the overwrite flag. Example: [AvifTransformer::class => true].",
+			"value": false
+		},
 		"WebPCheckAcceptHeader": {
 			"description": "Check if the accept header contains webp",
 			"value": false

@@ -76,12 +76,20 @@ class TransformImageJob extends Job {
 			return true;
 		}
 
+		$overwrite = $this->params['overwrite'] ?? false;
+		if ( $overwrite === false ) {
+			$overwrite = MediaWikiServices::getInstance()->getMainConfig()->get( 'WebPForceOverwriteInJobs' );
+			if ( is_array( $overwrite ) && array_key_exists( $this->params['transformer'], $overwrite ) ) {
+				$overwrite = $overwrite[$this->params['transformer']];
+			}
+		}
+
 		try {
 			$transformer = MediaWikiServices::getInstance()->getService( 'WebPTransformerFactory' )->getInstance(
 				$this->params['transformer'],
 				[
 					$file,
-					[ 'overwrite' => $this->params['overwrite'] ?? false ]
+					[ 'overwrite' => $overwrite ]
 				]
 			);
 		} catch ( InvalidArgumentException | RuntimeException $e ) {
