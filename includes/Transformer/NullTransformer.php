@@ -1,5 +1,23 @@
 <?php
 
+/**
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * @file
+ */
+
 declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Transformer;
@@ -10,7 +28,7 @@ use Status;
 /**
  * This is only used for tests
  */
-class NullTransformer extends AbstractBaseTransformer implements MediaTransformer {
+class NullTransformer extends AbstractBaseTransformer {
 
 	/**
 	 * @var Status
@@ -41,6 +59,13 @@ class NullTransformer extends AbstractBaseTransformer implements MediaTransforme
 	/**
 	 * @inheritDoc
 	 */
+	public static function checkExtensionsLoaded(): bool {
+		return true;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
 	public function transformLikeThumb( int $width ): Status {
 		return self::$transformStatus;
 	}
@@ -50,17 +75,6 @@ class NullTransformer extends AbstractBaseTransformer implements MediaTransforme
 	 */
 	public function transform(): Status {
 		return self::$transformStatus;
-	}
-
-	/**
-	 * @inheritDoc
-	 */
-	public static function changeExtension( string $path ): string {
-		return sprintf(
-			'%s.%s',
-			trim( substr( $path, 0, -( strlen( pathinfo( $path, PATHINFO_EXTENSION ) ) ) ), '.' ),
-			self::getFileExtension()
-		);
 	}
 
 	/**
@@ -86,5 +100,12 @@ class NullTransformer extends AbstractBaseTransformer implements MediaTransforme
 	 */
 	public static function getMimeType(): string {
 		return self::$mimeType;
+	}
+
+    /**
+     * @inheritDoc
+     */
+	public function transformImage( $outPath, int $width = -1 ): bool {
+		return true;
 	}
 }

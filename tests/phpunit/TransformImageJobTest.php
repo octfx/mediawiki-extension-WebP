@@ -1,5 +1,23 @@
 <?php
 
+/**
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * @file
+ */
+
 declare( strict_types=1 );
 
 namespace MediaWiki\Extension\WebP\Tests;
@@ -268,6 +286,92 @@ class TransformImageJobTest extends MediaWikiIntegrationTestCase {
 		$this->setService( 'WebPTransformerFactory', $factoryMock );
 
 		$this->assertTrue( $job->run() );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\WebP\TransformImageJob::run
+	 * @return void
+	 * @throws Exception
+	 */
+	public function testRunOverwriteFlagArrayTrue() {
+		$this->overrideConfigValues( [
+			'WebPForceOverwriteInJobs' => [
+				NullTransformer::class => true,
+			]
+		] );
+
+		NullTransformer::$canTransform = true;
+
+		$job = new TransformImageJob(
+			null,
+			[
+				'title' => 'Foo',
+				'transformer' => NullTransformer::class,
+				'overwrite' => false,
+			]
+		);
+
+		$fileMock = $this->getMockBuilder( LocalFile::class )->disableOriginalConstructor()->getMock();
+		$fileMock->expects( $this->once() )->method( 'exists' )->willReturn( true );
+
+		$repo = $this->getMockBuilder( RepoGroup::class )->disableOriginalConstructor()->getMock();
+		$repo->expects( $this->once() )
+			->method( 'findFile' )
+			->willReturn( $fileMock );
+
+		$factoryMock = $this->getMockBuilder( TransformerFactory::class )->getMock();
+		$factoryMock->expects( $this->once() )
+			->method( 'getInstance' )
+			->with( NullTransformer::class, [ $fileMock, [ 'overwrite' => true ] ] )
+			->willReturn( new NullTransformer( $fileMock, [] ) );
+
+		$this->setService( 'RepoGroup', $repo );
+		$this->setService( 'WebPTransformerFactory', $factoryMock );
+
+		$job->run();
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\WebP\TransformImageJob::run
+	 * @return void
+	 * @throws Exception
+	 */
+	public function testRunOverwriteFlagArrayFalse() {
+		$this->overrideConfigValues( [
+			'WebPForceOverwriteInJobs' => [
+				NullTransformer::class => false,
+			]
+		] );
+
+		NullTransformer::$canTransform = true;
+
+		$job = new TransformImageJob(
+			null,
+			[
+				'title' => 'Foo',
+				'transformer' => NullTransformer::class,
+				'overwrite' => false,
+			]
+		);
+
+		$fileMock = $this->getMockBuilder( LocalFile::class )->disableOriginalConstructor()->getMock();
+		$fileMock->expects( $this->once() )->method( 'exists' )->willReturn( true );
+
+		$repo = $this->getMockBuilder( RepoGroup::class )->disableOriginalConstructor()->getMock();
+		$repo->expects( $this->once() )
+			->method( 'findFile' )
+			->willReturn( $fileMock );
+
+		$factoryMock = $this->getMockBuilder( TransformerFactory::class )->getMock();
+		$factoryMock->expects( $this->once() )
+			->method( 'getInstance' )
+			->with( NullTransformer::class, [ $fileMock, [ 'overwrite' => false ] ] )
+			->willReturn( new NullTransformer( $fileMock, [] ) );
+
+		$this->setService( 'RepoGroup', $repo );
+		$this->setService( 'WebPTransformerFactory', $factoryMock );
+
+		$job->run();
 	}
 
 }
