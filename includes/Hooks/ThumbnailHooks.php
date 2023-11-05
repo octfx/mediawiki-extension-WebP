@@ -126,22 +126,18 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 			$dir = $transformer::getFileExtension();
 
 			if ( $thumbnail->fileIsSource() ) {
-				$url = str_replace(
-					'/images/',
-					sprintf( '/images/%s/', $dir ),
-					$transformer::changeExtension( $thumbnail->getUrl() )
-				);
+				$url = $transformer::changeExtension( $thumbnail->getUrl() );
+				$pos = strpos( $url, 'images' ) + 6;
+				$url = substr_replace( $url, '/' . $dir, $pos, 0 );
 
 				$path = $repo->getZonePath( 'public' );
 
 				$filePath = explode( $hash, $thumbnail->getFile()->getPath() );
 				$filePath = array_pop( $filePath );
 			} else {
-				$url = str_replace(
-					'/images/thumb/',
-					sprintf( '/images/thumb/%s/', $dir ),
-					$transformer::changeExtension( $thumbnail->getUrl() )
-				);
+				$url = $transformer::changeExtension( $thumbnail->getUrl() );
+				$pos = strpos( $url, 'thumb' ) + 5;
+				$url = substr_replace( $url, '/' . $dir, $pos, 0 );
 
 				$path = $repo->getZonePath( 'thumb' );
 

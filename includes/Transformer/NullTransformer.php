@@ -102,9 +102,9 @@ class NullTransformer extends AbstractBaseTransformer {
 		return self::$mimeType;
 	}
 
-    /**
-     * @inheritDoc
-     */
+	/**
+	 * @inheritDoc
+	 */
 	public function transformImage( $outPath, int $width = -1 ): bool {
 		return true;
 	}
