@@ -124,7 +124,7 @@ class AvifTransformer extends AbstractBaseTransformer {
 		$command->unsafeParams(
 			[
 				$this->getConfigValue( 'WebPAvifencLocation' ),
-				'-a cq-level=23',
+				'-a cq-level=18',
 				'-j all',
 				'--min 0',
 				'--max 63',

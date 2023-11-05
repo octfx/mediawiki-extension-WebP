@@ -42,12 +42,12 @@
 			"value": false
 		},
 		"WebPCompressionQuality": {
-			"description": "Compression Quality webp images",
+			"description": "Compression Quality webp images. An int between 1 and 100, 1 = high compression, 100 low compression.",
 			"value": 75
 		},
 		"WebPCompressionQualityAvif": {
-			"description": "Compression Quality for avif images",
-			"value": 30
+			"description": "Compression Quality for avif images. An int between 1 and 100, 1 = high compression, 100 low compression.",
+			"value": 75
 		},
 		"WebPFilterStrength": {
 			"description": "Filter Strength",
