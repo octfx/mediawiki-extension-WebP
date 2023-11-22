@@ -151,8 +151,8 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 				if ( $this->mainConfig->get( 'ResponsiveImages' ) ) {
 					// Add higher resolutions to the srcset
 					foreach ( [ 1.5, 2 ] as $resolution ) {
-						$res = (int)( $thumbnail->getWidth() * $resolution );
-						$resUrl = str_replace( (string)$thumbnail->getWidth(), (string)$res, $url );
+						$suffix = 'px-';
+						$resUrl = str_replace( (string)$thumbnail->getWidth() . $suffix, (string)$res . $suffix, $url );
 
 						if ( $this->mainConfig->get( 'WebPEnableResponsiveVersionJobs' ) === true ) {
 							$this->jobQueueGroup->push( new TransformImageJob(
