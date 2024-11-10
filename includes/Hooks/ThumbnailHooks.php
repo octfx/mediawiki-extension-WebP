@@ -141,7 +141,8 @@ class ThumbnailHooks implements LocalFilePurgeThumbnailsHook, PictureHtmlSupport
 
 				$srcset = [ $url ];
 
-				if ( $this->mainConfig->get( 'ResponsiveImages' ) ) {
+				// TODO: Allow toggle responsive image for each file format
+				if ( $this->mainConfig->get( 'WebPEnableResponsiveImages' ) ) {
 					// Add higher resolutions to the srcset
 					foreach ( [ 1.5, 2 ] as $resolution ) {
 						$res = (int)( $thumbnail->getWidth() * $resolution );

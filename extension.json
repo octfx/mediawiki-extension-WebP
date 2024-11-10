@@ -29,6 +29,10 @@
 			"description": "Enables WebP creation after a thumbnail was created",
 			"value": true
 		},
+		"WebPEnableResponsiveImages": {
+			"description": "Generate 1.5x and 2x thumbnails.",
+			"value": true
+		},
 		"WebPEnableResponsiveVersionJobs": {
 			"description": "Dispatch jobs for 1.5x and 2x file versions. Note: This runs for each thumbnail inclusion and may be disabled after all present thumbnails have been converted.",
 			"value": true
